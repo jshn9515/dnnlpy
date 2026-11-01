@@ -296,6 +296,7 @@ def simulate[StateT, ActionT](
     total_rewards: list[float] = []  # The discounted rewards we get on each trial
 
     for episode in range(num_episodes):
+        mdp.reset_state()  # Reset the MDP to its initial state for each episode
         state = mdp.start_state
 
         if demo:

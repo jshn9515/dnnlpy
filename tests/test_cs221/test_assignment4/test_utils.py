@@ -140,3 +140,13 @@ def test_simulate_stops_on_terminal_and_discounts_rewards():
     actual = utils.simulate(mdp, rl, num_episodes=2, train=False, verbose=False)
     expected = [2.0, 2.0]
     npt.assert_allclose(actual, expected)
+
+
+def test_simulate_resets_number_line_between_episodes():
+    mdp = a4.NumberLineMDP(n=1, seed=0)
+    rl = a4.FixedRLAlgorithm({0: 1}, mdp.actions, epsilon=0)
+
+    rewards = utils.simulate(mdp, rl, num_episodes=2, train=False, verbose=False)
+
+    assert len(rewards) == 2
+    assert set(rewards).issubset({mdp.left_reward, mdp.right_reward})
