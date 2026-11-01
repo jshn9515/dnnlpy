@@ -7,7 +7,6 @@ Install and usage examples are in the package `README.md <https://github.com/jsh
 
 .. toctree::
    :maxdepth: 2
-   :caption: API reference
 
 Indices
 -------
