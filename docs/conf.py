@@ -17,6 +17,7 @@ with open(PACKAGE_ROOT / 'pyproject.toml', 'rb') as project_file:
 extensions = [
     'autoapi.extension',
     'sphinx.ext.napoleon',
+    'sphinx.ext.viewcode',
 ]
 exclude_patterns = [
     '_build',
