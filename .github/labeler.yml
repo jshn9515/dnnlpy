@@ -12,6 +12,13 @@ dependencies:
           - "requirements.txt"
           - "pyproject.toml"
 
+cs221:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/dnnlpy/cs221/**"
+          - "src/dnnlpy/cli/cs221/**"
+          - "tests/test_cs221/**"
+
 documentation:
   - changed-files:
       - any-glob-to-any-file:
