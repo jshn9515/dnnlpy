@@ -37,7 +37,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12", "3.13", "3.14", "3.14t"]
+        python-version: ["3.12", "3.13", "3.14", "3.14t", "3.15", "3.15t"]
 
     steps:
       - name: Check out repository
@@ -52,7 +52,15 @@ jobs:
             pyproject.toml
             uv.lock
 
-      - name: Install dependencies
+      - name: Install SDL2 dependencies (for pygame-ce)
+        if: contains(fromJSON('["3.14t", "3.15", "3.15t"]'), matrix.python-version)
+        run: |
+          sudo apt-get update
+          sudo apt-get install build-essential
+          sudo apt-get install libfreetype6-dev libportmidi-dev
+          sudo apt-get install libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev
+
+      - name: Install Python dependencies
         run: uv sync --python ${{ matrix.python-version }} --locked --all-extras
 
       - name: Test dnnlpy package
