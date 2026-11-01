@@ -20,6 +20,8 @@ import dnnlpy.cs221.assignment4 as a4
 
 from .utils import plot_rewards
 
+__all__ = ['main']
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(
     level=os.getenv('DNNL_LOG_LEVEL', 'INFO').upper(),
@@ -105,6 +107,7 @@ def train_value_iteration(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
+    """Run the main training script for the ``MountainCar`` environment."""
     parser = argparse.ArgumentParser(
         prog='dnnlpy-cs221-a4-train.exe',
         description='Train and evaluate various agents on the MountainCar environment.',
