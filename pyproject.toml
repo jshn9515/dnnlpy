@@ -43,6 +43,7 @@ test = ["pytest>=9.2.0,<9.3.0"]
 [project.urls]
 Homepage = "https://github.com/jshn9515/dnnlpy"
 Repository = "https://github.com/jshn9515/dnnlpy.git"
+Documentation = "https://jshn9515.github.io/dnnlpy/"
 
 [tool.uv]
 torch-backend = "cpu"
