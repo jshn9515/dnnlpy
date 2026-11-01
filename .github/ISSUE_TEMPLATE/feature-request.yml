@@ -1,0 +1,47 @@
+name: Feature Request
+description: Suggest a new dnnlpy feature or documentation improvement
+title: "FEA: "
+labels:
+  - feature-request
+assignees:
+  - jshn9515
+
+body:
+  - type: dropdown
+    id: request-type
+    attributes:
+      label: Request type
+      description: What kind of improvement are you suggesting?
+      options:
+        - New function or method in dnnlpy
+        - New documentation page or section
+        - New example or tutorial
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: What is missing, unclear, inconvenient, or worth improving?
+      placeholder: |
+        Describe the problem or motivation behind this request.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: What would you like to add or change?
+      placeholder: |
+        Describe the topic, explanation, feature, code example, or implementation you would like to see.
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add any examples, references, links, screenshots, implementation ideas, or other useful context.

@@ -1,0 +1,34 @@
+name: Bug Report
+description: Report an error, bug, or problem
+title: "BUG: "
+labels:
+  - bug
+assignees:
+  - jshn9515
+
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the problem you encountered.
+      placeholder: |
+        Explain what is incorrect, unclear, broken, or unexpected.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: What did you expect instead?
+      placeholder: |
+        Describe what you expected to happen, or what the correct behavior should be.
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add error messages, screenshots, reproduction steps, environment details, or other useful information.
