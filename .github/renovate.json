@@ -12,6 +12,12 @@
       "matchPackageNames": ["torch", "torchvision", "torchaudio"]
     },
     {
+      "description": "Ignore Python Docker image and interpreter version updates",
+      "matchDatasources": ["docker", "python-version"],
+      "matchPackageNames": ["python"],
+      "enabled": false
+    },
+    {
       "description": "Ignore Python version requirement updates",
       "matchManagers": ["pep621"],
       "matchDepTypes": ["requires-python"],
