@@ -1,11 +1,11 @@
 # dnnlpy
 
-[![nnlpy-ci](https://github.com/jshn9515/dnnlpy/actions/workflows/dnnlpy-ci.yml/badge.svg)](https://github.com/jshn9515/dnnlpy/actions/workflows/dnnlpy-ci.yml)
-[![dnnlpy-docs](https://github.com/jshn9515/dnnlpy/actions/workflows/build-docs.yml/badge.svg)](https://github.com/jshn9515/dnnlpy/actions/workflows/build-docs.yml)
-[![Codecov](https://codecov.io/gh/jshn9515/dnnlpy/graph/badge.svg?branch=main)](https://codecov.io/gh/jshn9515/dnnlpy)
 [![PyPI](https://img.shields.io/pypi/v/dnnlpy)](https://pypi.org/project/dnnlpy/)
 [![Python](https://img.shields.io/pypi/pyversions/dnnlpy.svg)](https://pypi.org/project/dnnlpy/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.14-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![dnnlpy-ci](https://github.com/jshn9515/dnnlpy/actions/workflows/dnnlpy-ci.yml/badge.svg)](https://github.com/jshn9515/dnnlpy/actions/workflows/dnnlpy-ci.yml)
+[![dnnlpy-docs](https://github.com/jshn9515/dnnlpy/actions/workflows/build-docs.yml/badge.svg)](https://github.com/jshn9515/dnnlpy/actions/workflows/build-docs.yml)
+[![Codecov](https://codecov.io/gh/jshn9515/dnnlpy/graph/badge.svg?branch=main)](https://codecov.io/gh/jshn9515/dnnlpy)
 [![Downloads](https://static.pepy.tech/badge/dnnlpy/month)](https://pepy.tech/project/dnnlpy)
 
 **dnnlpy** is the companion Python package for **dnnl-notes**. It provides code examples, helper functions, and small utilities used throughout the tutorial, similar in spirit to the `d2l` package for _Dive into Deep Learning_.
@@ -82,6 +82,10 @@ output, weights = dF.scaled_dot_product_attention(
 )
 ```
 
-## License
+## 📄 License
 
 This project is licensed under the **MIT License**.
+
+## ⭐ Star History
+
+[![Star History Chart](https://api.star-history.com/chart?repos=datawhalechina/deep-learning-notes&type=date&legend=top-left)](https://www.star-history.com/?repos=datawhalechina%2Fdeep-learning-notes&type=date&legend=top-left)
