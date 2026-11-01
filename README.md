@@ -2,7 +2,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/dnnlpy)](https://pypi.org/project/dnnlpy/)
 [![Python](https://img.shields.io/pypi/pyversions/dnnlpy.svg)](https://pypi.org/project/dnnlpy/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.14-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.14.0-ee4c2c?logo=pytorch)](https://pytorch.org/)
 [![dnnlpy-ci](https://github.com/jshn9515/dnnlpy/actions/workflows/dnnlpy-ci.yml/badge.svg)](https://github.com/jshn9515/dnnlpy/actions/workflows/dnnlpy-ci.yml)
 [![dnnlpy-docs](https://github.com/jshn9515/dnnlpy/actions/workflows/build-docs.yml/badge.svg)](https://github.com/jshn9515/dnnlpy/actions/workflows/build-docs.yml)
 [![Codecov](https://codecov.io/gh/jshn9515/dnnlpy/graph/badge.svg?branch=main)](https://codecov.io/gh/jshn9515/dnnlpy)
