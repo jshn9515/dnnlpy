@@ -150,3 +150,26 @@ def test_simulate_resets_number_line_between_episodes():
 
     assert len(rewards) == 2
     assert set(rewards).issubset({mdp.left_reward, mdp.right_reward})
+
+
+class NoActionAfterFirstStep(a4.RLAlgorithm[int, int]):
+    def __init__(self) -> None:
+        self.transitions: list[a4.MDPTransition[int, int]] = []
+
+    def get_action(self, state: int, explore: bool = True) -> int | None:
+        return 1 if state == 0 else None
+
+    def step(self, transition: a4.MDPTransition[int, int]) -> None:
+        self.transitions.append(transition)
+
+
+@pytest.mark.parametrize('train', [False, True])
+def test_simulate_ends_episode_when_agent_has_no_action(train: bool):
+    mdp = TwoStepMDP()
+    rl = NoActionAfterFirstStep()
+
+    rewards = utils.simulate(mdp, rl, num_episodes=2, train=train, verbose=False)
+
+    npt.assert_allclose(rewards, [1.0, 1.0])
+    assert mdp.state == 1
+    assert len(rl.transitions) == (2 if train else 0)

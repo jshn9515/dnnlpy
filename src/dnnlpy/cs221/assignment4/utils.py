@@ -311,6 +311,9 @@ def simulate[StateT, ActionT](
                 time.sleep(0.05)
 
             action = rl.get_action(state, explore=train)
+            if action is None:
+                break  # No feasible action is available; end this episode
+
             transition = mdp.transition(action)
             episode_length += 1
 

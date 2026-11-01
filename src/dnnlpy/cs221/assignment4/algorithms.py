@@ -41,7 +41,7 @@ class RLAlgorithm[StateT, ActionT](ABC):
     """
 
     @abstractmethod
-    def get_action(self, state: StateT, explore: bool = True) -> ActionT:
+    def get_action(self, state: StateT, explore: bool = True) -> ActionT | None:
         """Select an action for the given state.
 
         Args:
@@ -50,7 +50,8 @@ class RLAlgorithm[StateT, ActionT](ABC):
                 Defaults to ``True``.
 
         Returns:
-            ActionT: The selected action.
+            ActionT | None: The selected action. If no valid action is available, return
+                ``None``.
         """
 
     @abstractmethod
