@@ -43,7 +43,7 @@ docs = [
     "sphinx>=9.2.0,<9.3.0; python_version >= '3.13'",
     "sphinx-autoapi>=3.9.0,<3.10.0",
 ]
-test = ["pytest>=9.2.0,<9.3.0"]
+test = ["pytest>=9.2.0,<9.3.0", "pytest-cov>=7.1.0,<7.2.0"]
 
 [project.urls]
 Homepage = "https://github.com/jshn9515/dnnlpy"
