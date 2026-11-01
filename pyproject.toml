@@ -51,6 +51,9 @@ Homepage = "https://github.com/jshn9515/dnnlpy"
 Repository = "https://github.com/jshn9515/dnnlpy.git"
 Documentation = "https://jshn9515.github.io/dnnlpy/"
 
+[project.scripts]
+dnnlpy-cs221-a4-train = "dnnlpy.cli.cs221.assignment4.train:main"
+
 [tool.uv]
 torch-backend = "cpu"
 
