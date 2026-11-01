@@ -41,7 +41,7 @@ docs = [
     "furo==2025.12.19",
     "sphinx>=9.1.0,<9.2.0; python_version == '3.12'",
     "sphinx>=9.2.0,<9.3.0; python_version >= '3.13'",
-    "sphinx-autoapi>=3.8.0,<3.9.0",
+    "sphinx-autoapi>=3.9.0,<3.10.0",
 ]
 test = ["pytest>=9.2.0,<9.3.0"]
 
