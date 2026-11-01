@@ -1,0 +1,79 @@
+# dnnlpy
+
+**dnnlpy** is the companion Python package for **dnnl-notes**. It provides code examples, helper functions, and small utilities used throughout the tutorial, similar in spirit to the `d2l` package for _Dive into Deep Learning_.
+
+The package follows a PyTorch-like structure, with lightweight, readable implementations designed for educational use:
+
+- `dnnlpy.nn` provides reusable neural network modules, such as attention layers and positional encodings.
+- `dnnlpy.nn.functional` provides stateless operations, such as functional attention implementations.
+- `dnnlpy.optim` implements optimizers, such as SGD and Adam.
+
+The APIs follow PyTorch conventions where practical, prioritizing simplicity and readability over framework-level completeness. The package serves as a code supplement to the notes, making examples easier to run, reuse, and extend.
+
+## Requirements
+
+- Python 3.12 or newer
+- PyTorch 2.14 or newer
+
+## Installation
+
+Install the published package from PyPI with:
+
+```bash
+uv pip install dnnlpy
+```
+
+To install the latest version directly from this repository, use:
+
+```bash
+uv pip install https://github.com/jshn9515/dnnlpy.git
+```
+
+This project uses [uv](https://docs.astral.sh/uv/) for local package development. If you want to contribute to the package, you can install it in editable mode with:
+
+```bash
+git clone https://github.com/jshn9515/dnnlpy.git
+cd dnnlpy
+uv pip install -e .
+```
+
+This way, changes to the source code take effect immediately without reinstalling the package each time.
+
+## Examples
+
+After installation, you can import reusable neural network modules from `dnnlpy.nn`:
+
+```python
+import dnnlpy.nn as dnn
+import torch
+
+attn = dnn.MultiheadAttention(embed_dim=16, num_heads=4)
+
+query = torch.randn(2, 8, 16)
+key = torch.randn(2, 8, 16)
+value = torch.randn(2, 8, 16)
+
+output = attn(query, key, value)
+```
+
+You can also import stateless functions from `dnnlpy.nn.functional`:
+
+```python
+import dnnlpy.nn.functional as dF
+import torch
+
+query = torch.randn(2, 4, 8, 16)
+key = torch.randn(2, 4, 8, 16)
+value = torch.randn(2, 4, 8, 16)
+
+output, weights = dF.scaled_dot_product_attention(
+    query,
+    key,
+    value,
+    need_weights=True,
+)
+```
+
+## License
+
+This project is licensed under the **MIT License**.

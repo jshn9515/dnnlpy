@@ -1,0 +1,46 @@
+[project]
+name = "dnnlpy"
+version = "2026.11.01.dev0"
+keywords = ["deep learning", "pytorch", "utilities"]
+description = "A utility library for deep learning notes, providing common functions and tools to support the main content of the deep learning notes collection."
+authors = [{ name = "Yunjie Lin", email = "jshn9510@gmail.com" }]
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12,<3.15"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    # PyTorch ecosystem
+    "torch[opt-einsum,pyyaml]>=2.14.0,<2.15.0",
+
+    # Scientific computing and visualization
+    "numpy>=2.5.0,<2.6.0",
+    "matplotlib>=3.11.0,<3.12.0",
+
+    # Code quality and formatting
+    "ruff>=0.17.0,<0.18.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=9.2.0,<9.3.0"]
+
+[project.urls]
+Homepage = "https://github.com/jshn9515/dnnlpy"
+Repository = "https://github.com/jshn9515/dnnlpy.git"
+
+[tool.uv]
+torch-backend = "cpu"
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14.0"]
+build-backend = "uv_build"
