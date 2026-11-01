@@ -52,7 +52,14 @@ jobs:
             pyproject.toml
             uv.lock
 
-      - name: Install dependencies
+      - name: Install SDL2 dependencies (for pygame-ce)
+        run: |
+          sudo apt-get update
+          sudo apt-get install build-essential
+          sudo apt-get install libfreetype6-dev libportmidi-dev
+          sudo apt-get install libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev
+
+      - name: Install Python dependencies
         run: uv sync --python ${{ matrix.python-version }} --locked --all-extras
 
       - name: Test dnnlpy package
