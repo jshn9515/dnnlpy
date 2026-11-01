@@ -1,4 +1,4 @@
-name: Test and Build dnnlpy package
+name: dnnlpy-ci
 
 on:
   push:

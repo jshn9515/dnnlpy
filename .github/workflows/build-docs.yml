@@ -1,4 +1,4 @@
-name: Build and deploy dnnlpy docs
+name: dnnlpy-docs
 
 on:
   push:
