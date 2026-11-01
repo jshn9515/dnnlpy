@@ -1,0 +1,110 @@
+name: Test and Build dnnlpy package
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/dnnlpy-ci.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/dnnlpy-ci.yml"
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  UV_TORCH_BACKEND: cpu
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'release' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
+
+jobs:
+  dnnlpy-ci:
+    name: dnnlpy-ci (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13", "3.14", "3.14t"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
+          cache-suffix: py${{ matrix.python-version }}
+          cache-dependency-glob: |
+            pyproject.toml
+            uv.lock
+
+      - name: Install dependencies
+        run: uv sync --python ${{ matrix.python-version }} --locked --all-extras
+
+      - name: Test dnnlpy package
+        env:
+          UV_NO_SYNC: "1"
+        run: uv run pytest ./tests
+
+      - name: Build dnnlpy package
+        run: uv build . --out-dir dist
+
+      - name: Upload package artifact
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: dnnlpy-py${{ matrix.python-version }}
+          path: |
+            dist/*.tar.gz
+            dist/*.whl
+          if-no-files-found: error
+
+  dnnlpy-release:
+    name: dnnlpy-release
+    if: ${{ github.event_name == 'release' }}
+    needs: dnnlpy-ci
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+
+    steps:
+      - name: Download package artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: dnnlpy-py3.14
+          path: dist
+
+      - name: Generate package attestation
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.whl
+
+      - name: Upload dnnlpy package to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          gh release upload "$RELEASE_TAG" \
+            dist/*.whl \
+            dist/*.tar.gz \
+            --clobber
