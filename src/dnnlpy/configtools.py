@@ -39,13 +39,14 @@ def set_seed(
     """Seed Python, NumPy, and PyTorch random number generators.
 
     Args:
-        seed (int, default: None): Seed value to apply to all supported random
-            number generators.
-        deterministic (bool, default: False): Whether to request deterministic
-            PyTorch algorithms.
-        benchmark (bool, default: False): Whether to enable cuDNN benchmark mode.
-        warn_only (bool, default: True): Whether nondeterministic PyTorch
-            operations should warn instead of raising an error.
+        seed (int, optional): Seed value to apply to all supported random number generators.
+            Defaults to ``None``.
+        deterministic (bool, optional): Whether to request deterministic PyTorch algorithms.
+            Defaults to ``False``.
+        benchmark (bool, optional): Whether to enable cuDNN benchmark mode. Defaults to
+            ``False``.
+        warn_only (bool, optional): Whether nondeterministic PyTorch operations should warn
+            instead of raising an error. Defaults to ``True``.
 
     Returns:
         Generator: The PyTorch generator returned by :func:`torch.manual_seed`.
@@ -77,8 +78,8 @@ def get_default_device() -> torch.device:
 def get_data_path() -> Path:
     """Return the dataset root directory, creating it when necessary.
 
-    This function is similar to :func:`get_data_dir`, but it returns a Path object.
-    The `DNNL_DATA_ROOT` environment variable overrides the default `~/datasets` location.
+    This function is similar to :func:`get_data_dir`, but it returns a Path object. The
+    ``DNNL_DATA_ROOT`` environment variable overrides the default ``~/datasets`` location.
     """
     default_root = pdi.user_data_path('dnnlpy', appauthor=False)
     root = Path(os.getenv('DNNL_DATA_ROOT', default_root))
@@ -91,8 +92,8 @@ def get_data_dir() -> str:
     """Return the dataset root directory, creating it when necessary.
 
     This function is similar to :func:`get_data_path`, but it returns a string instead
-    of a Path object. The `DNNL_DATA_ROOT` environment variable overrides the default
-    `~/datasets` location.
+    of a Path object. The ``DNNL_DATA_ROOT`` environment variable overrides the default
+    ``~/datasets`` location.
     """
     root = get_data_path()
     return root.as_posix()
