@@ -127,6 +127,7 @@ class NumberLineMDP(MDP[int, int]):
     @property
     @override
     def start_state(self) -> int:
+        """Returns the start state of the MDP."""
         return 0
 
     @property
@@ -136,6 +137,7 @@ class NumberLineMDP(MDP[int, int]):
 
     @override
     def reset_state(self) -> None:
+        """Reset the MDP to its initial state."""
         self.state = 0
 
     @override
@@ -279,6 +281,7 @@ class GymMDP(MDP[np.ndarray, int]):
 
     @override
     def reset_state(self) -> None:
+        """Reset the Gymnasium environment to its initial state."""
         self.rng = np.random.default_rng(self.seed)
         self.state, _ = self.env.reset(seed=self.seed)
 
@@ -367,6 +370,7 @@ class DiscreteGymMDP(GymMDP):
         seed: int | None = None,
         **custom_kwargs: Unpack[GymMDPKwargs],
     ):
+        """Initialize the ``DiscreteGymMDP`` with the given parameters."""
         super().__init__(
             env,
             discount=discount,
@@ -398,6 +402,7 @@ class DiscreteGymMDP(GymMDP):
     @property
     @override
     def start_state(self) -> np.ndarray:
+        """Returns the start state of the MDP."""
         self.reset_state()
         return utils.discretize(self.state, self.bins)
 
