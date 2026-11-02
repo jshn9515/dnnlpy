@@ -87,7 +87,7 @@ def create_bins(
 
     Returns:
         list[np.ndarray]: A list of arrays, where each array contains the bin edges for
-            a feature.
+        a feature.
 
     Raises:
         AssertionError: If :attr:`low` and :attr:`high` do not have the same length
@@ -165,16 +165,16 @@ def polynomial_feature_extractor(
     r"""Extracts polynomial features from the given state up to the specified degree.
 
     For a state with :math:`d` dimensions, this function computes all polynomial combinations
-    of the state dimensions up to the specified degree, including interaction terms. The resulting
-    feature vector will have a length of :math:`\binom{d + \text{degree}}{\text{degree}}`, which
-    includes all combinations of the state dimensions up to the specified degree.
+    of the state dimensions up to the specified degree, including interaction terms. The
+    resulting feature vector will have a length of :math:`m`, which includes all combinations
+    of the state dimensions up to the specified degree.
 
     For example, we have a 3D state :math:`(x, y, z)` with degree 2, and scale :math:`[2, 1, 1]`,
     the output will include features like:
 
     .. math::
 
-        \[1, 2x, y, z, 4x^2, y^2, z^2, 2xy, 2xz, yz, 4x^2y, 4x^2z, \dots, 4x^2y^2z^2\]
+        [1, 2x, y, z, 4x^2, y^2, z^2, 2xy, 2xz, yz, 4x^2y, 4x^2z, \dots, 4x^2y^2z^2]
 
     Args:
         state (np.ndarray): The input state, a NumPy array of shape ``(features,)``.
@@ -186,7 +186,7 @@ def polynomial_feature_extractor(
 
     Returns:
         np.ndarray: A 1D array containing the polynomial features of the input state, including
-            all combinations of the state dimensions up to the specified degree.
+        all combinations of the state dimensions up to the specified degree.
 
     Examples:
         >>> state = np.array([1, 2])
@@ -213,15 +213,15 @@ def fourier_feature_extractor(
 ) -> np.ndarray:
     r"""Extracts Fourier features from the given state up to the specified maximum coefficient.
 
-    For a state with :math:`d` dimensions, this function computes the Fourier features of the
-    state dimensions up to the specified maximum coefficient. The resulting feature vector will
-    have a length of :math:`(max\_coeff + 1)^d`, which includes all combinations of the state
-    dimensions up to the specified maximum coefficient.
+    For a state with :math:`d` dimensions, this function computes the Fourier features of
+    the state dimensions up to the specified maximum coefficient. The resulting feature vector
+    will have a length of :math:`m`, which includes all combinations of the state dimensions
+    up to the specified maximum coefficient.
 
     .. math::
 
-        \[1, \cos(\pi c_1 s_1), \cos(\pi c_2 s_2), \ldots, \cos(\pi c_d s_d),
-        \cos(\pi c_1 s_1 + \pi c_2 s_2 + \ldots + \pi c_d s_d), \ldots\]
+        [1, \cos(\pi c_1 s_1), \cos(\pi c_2 s_2), \ldots, \cos(\pi c_d s_d),
+        \cos(\pi c_1 s_1 + \pi c_2 s_2 + \ldots + \pi c_d s_d), \ldots]
 
     Args:
         state (np.ndarray): The input state, a NumPy array of shape ``(features,)``.
@@ -234,7 +234,7 @@ def fourier_feature_extractor(
 
     Returns:
         np.ndarray: A 1D array containing the Fourier features of the input state, including
-            all combinations of the state dimensions up to the specified maximum coefficient.
+        all combinations of the state dimensions up to the specified maximum coefficient.
 
     Examples:
         >>> state = np.array([0.5, 1.0])

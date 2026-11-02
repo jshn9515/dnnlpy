@@ -51,7 +51,7 @@ class RLAlgorithm[StateT, ActionT](ABC):
 
         Returns:
             ActionT | None: The selected action. If no valid action is available, return
-                ``None``.
+            ``None``.
         """
 
     @abstractmethod
@@ -65,13 +65,13 @@ class RLAlgorithm[StateT, ActionT](ABC):
 
 
 class FixedRLAlgorithm[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
-    """A RL agent that follows a fixed policy without learning.
+    r"""A RL agent that follows a fixed policy without learning.
 
     Args:
         pi (dict[StateT, ActionT]): A dictionary mapping states to actions.
         actions (list[ActionT]): A list of possible actions.
         epsilon (float, optional): The probability of taking a random action instead of
-            the one specified by the policy :math:`pi`. Defaults to 0.2.
+            the one specified by the policy :math:`\pi`. Defaults to 0.2.
         seed (int, optional): Random seed for reproducibility. Defaults to ``None``.
     """
 
@@ -357,8 +357,8 @@ class ModelBasedMonteCarlo[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         collected observations, then runs value iteration on the estimated model to
         update the policy.
 
-        The resulting policy is stored as action indices in self.pi_indices, with ``-1``
-        indicating states without a valid action.
+        The resulting policy is stored as action indices in ``self.pi_indices``, with
+        ``-1`` indicating states without a valid action.
 
         Args:
             transition (MDPTransition): A tuple containing the current step's transition

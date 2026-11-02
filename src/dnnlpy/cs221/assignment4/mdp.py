@@ -148,7 +148,7 @@ class NumberLineMDP(MDP[int, int]):
 
         Returns:
             MDPTransition: A transition object containing the previous state, action,
-                reward, next state, and terminal flag.
+            reward, next state, and terminal flag.
         """
         if self.state in self.terminal_states:
             raise RuntimeError('Attempting to call transition on a terminated MDP.')
@@ -297,7 +297,7 @@ class GymMDP(MDP[np.ndarray, int]):
 
         Returns:
             float: Shaped reward for MountainCar environments, or the original reward for
-                other environments.
+            other environments.
         """
         if self.env.unwrapped.spec is None:
             raise AssertionError('Environment spec is not available.')
