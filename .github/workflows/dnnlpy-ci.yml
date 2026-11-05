@@ -47,6 +47,7 @@ jobs:
         uses: astral-sh/setup-uv@v10.3.0
         with:
           enable-cache: true
+          prune-cache: true
           cache-suffix: py${{ matrix.python-version }}
           cache-dependency-glob: |
             pyproject.toml
