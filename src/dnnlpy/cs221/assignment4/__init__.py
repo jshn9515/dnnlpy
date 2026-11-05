@@ -20,23 +20,25 @@ from .algorithms import (
 )
 from .env import (
     CustomMountainCarEnv as CustomMountainCarEnv,
+    NumberLineEnv as NumberLineEnv,
     register_custom_mountain_car_env as register_custom_mountain_car_env,
+    register_number_line_env as register_number_line_env,
 )
 from .mdp import (
     MDP as MDP,
-    ContinuousGymMDP as ContinuousGymMDP,
-    DiscreteGymMDP as DiscreteGymMDP,
-    GymMDP as GymMDP,
+    ContinuousMountainCarMDP as ContinuousMountainCarMDP,
+    DiscreteMountainCarMDP as DiscreteMountainCarMDP,
     MDPTransition as MDPTransition,
+    MountainCarMDP as MountainCarMDP,
     NumberLineMDP as NumberLineMDP,
 )
 from .utils import (
-    BinnedStateIndexer as BinnedStateIndexer,
-    NumberLineIndexer as NumberLineIndexer,
     fourier_feature_extractor as fourier_feature_extractor,
     polynomial_feature_extractor as polynomial_feature_extractor,
     simulate as simulate,
 )
 
+register_number_line_env()
 register_custom_mountain_car_env()
+del register_number_line_env
 del register_custom_mountain_car_env

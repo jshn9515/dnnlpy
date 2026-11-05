@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import logging
-import math
 import time
-from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING
 
 import numpy as np
 import numpy.typing as npt
@@ -14,147 +12,12 @@ if TYPE_CHECKING:
     from .mdp import MDP
 
 __all__ = [
-    'BinnedStateIndexer',
-    'NumberLineIndexer',
     'fourier_feature_extractor',
     'polynomial_feature_extractor',
     'simulate',
 ]
 
 logger = logging.getLogger(__name__)
-
-
-class Indexer[StateT](ABC):
-    """An abstract base class for mapping states to contiguous indices."""
-
-    @abstractmethod
-    def to_index(self, state: StateT) -> int:
-        """Returns the index of the given state."""
-
-    @abstractmethod
-    def from_index(self, index: int) -> StateT:
-        """Returns the state with the given index (the inverse of :meth:`to_index`)."""
-
-    @abstractmethod
-    def all_states(self) -> list[StateT]:
-        """Returns all the states in order of their indices."""
-
-
-class NumberLineIndexer(Indexer[int]):
-    r"""Utility for mapping integer number line states to contiguous indices.
-
-    Args:
-        n (int): The maximum absolute value of the states. The states will be in the range
-            :math:`[-n, n]`.
-    """
-
-    def __init__(self, n: int) -> None:
-        r"""Initialize the indexer for states :math:`\{-n,\dots,n\}`."""
-        self.n = n
-        self.num_states = 2 * self.n + 1
-
-    @override
-    def to_index(self, state: int) -> int:
-        """Returns the index of the number line state (:math:`-n` has index 0)."""
-        return state + self.n
-
-    @override
-    def from_index(self, index: int) -> int:
-        """Returns the number line state with index (the inverse of :meth:`to_index`)."""
-        return index - self.n
-
-    @override
-    def all_states(self) -> list[int]:
-        r"""Returns all the states :math:`\{-n,\dots,n\}`, in order of their indices."""
-        return list(range(-self.n, self.n + 1))
-
-
-def create_bins(
-    low: list[float],
-    high: list[float],
-    bins: int | list[int],
-) -> list[np.ndarray]:
-    """Takes in the lower and upper bounds of each feature and returns a list with one array
-    of :attr:`bins` evenly spaced bin edges per feature.
-
-    Args:
-        low (list[float]): The lower bounds of each feature.
-        high (list[float]): The upper bounds of each feature.
-        bins (int | list[int]): The number of bins for each feature. If an integer is
-            provided, the same number of bins will be used for all features. If a list is
-            provided, it must have the same length as :attr:`low` and :attr:`high`, and
-            each element specifies the number of bins for the corresponding feature.
-
-    Returns:
-        list[np.ndarray]: A list of arrays, where each array contains the bin edges for
-        a feature.
-
-    Raises:
-        AssertionError: If :attr:`low` and :attr:`high` do not have the same length
-        AssertionError: If :attr:`num_bins` is a list and does not have the same length as
-            :attr:`low` and :attr:`high`.
-    """
-    if len(low) != len(high):
-        raise AssertionError('`low` and `high` must have the same length.')
-    if isinstance(bins, list) and len(bins) != len(low):
-        raise AssertionError('`num_bins` must have same length as `low` and `high`.')
-
-    if isinstance(bins, int):
-        bins = [bins for _ in range(len(low))]
-
-    bins_arr: list[np.ndarray] = []
-    for l, h, n in zip(low, high, bins, strict=True):
-        bins_arr.append(np.linspace(l, h, n))
-
-    return bins_arr
-
-
-def discretize(x: np.ndarray, bins: list[np.ndarray]) -> np.ndarray:
-    """Discretizes an array :attr:`x` according to the provided :attr:`bins`.
-
-    Args:
-        x (np.ndarray): The continuous observation to be discretized.
-        bins (list[np.ndarray]): A list of bin edge arrays, one per feature.
-
-    Returns:
-        np.ndarray: An array of bin indices corresponding to the discretized observation.
-    """
-    multi_index: list[int] = []
-    for feature, bin_edges in zip(x, bins, strict=True):
-        index = int(np.digitize(feature, bin_edges))
-        multi_index.append(index)
-    return np.array(multi_index)
-
-
-class BinnedStateIndexer(Indexer[np.ndarray]):
-    """Utility for mapping continuous states to discrete states using bins.
-
-    Args:
-        bins (list[np.ndarray]): A list of bin edges for each dimension of the state space.
-    """
-
-    def __init__(self, bins: list[np.ndarray]):
-        """Initialize the indexer with the given bins."""
-        self.bins = bins
-        self.state_shapes = tuple(len(b) + 1 for b in bins)
-        self.num_states = math.prod(self.state_shapes)
-
-    @override
-    def to_index(self, state: np.ndarray) -> int:
-        """Returns the flat index of an already discretized state."""
-        index = np.ravel_multi_index(state, self.state_shapes)
-        return int(index)
-
-    @override
-    def from_index(self, index: int) -> tuple[int, ...]:
-        """Returns the tuple of bin indices with state index (the inverse of :meth:`to_index`)."""
-        multi_index = np.unravel_index(index, self.state_shapes)
-        return tuple(int(i) for i in multi_index)
-
-    @override
-    def all_states(self) -> list[int]:
-        r"""Returns all the state indices :math:`\{0,\dots,n-1\}`."""
-        return list(range(self.num_states))
 
 
 def polynomial_feature_extractor(
@@ -254,12 +117,12 @@ def fourier_feature_extractor(
     return np.cos(np.pi * features)
 
 
-def _render_mdp[StateT, ActionT](mdp: MDP[StateT, ActionT]):
-    """Renders the MDP environment if it is a GymMDP."""
-    from .mdp import GymMDP
+def _render_mdp[StateT, ActionT](mdp: MDP[StateT, ActionT]) -> None:
+    """Renders a Mountain Car MDP environment."""
+    from .mdp import MountainCarMDP
 
-    if not isinstance(mdp, GymMDP):
-        raise TypeError('Demo mode is only supported for GymMDP.')
+    if not isinstance(mdp, MountainCarMDP):
+        raise TypeError('Demo mode is only supported for MountainCarMDP.')
 
     mdp.env.render()
 
@@ -296,8 +159,7 @@ def simulate[StateT, ActionT](
     total_rewards: list[float] = []  # The discounted rewards we get on each trial
 
     for episode in range(num_episodes):
-        mdp.reset_state()  # Reset the MDP to its initial state for each episode
-        state = mdp.start_state
+        state = mdp.reset()  # Reset the MDP to its initial state for each episode
 
         if demo:
             _render_mdp(mdp)
@@ -314,7 +176,7 @@ def simulate[StateT, ActionT](
             if action is None:
                 break  # No feasible action is available; end this episode
 
-            transition = mdp.transition(action)
+            transition = mdp.step(action)
             episode_length += 1
 
             if train:
