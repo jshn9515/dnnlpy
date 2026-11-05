@@ -69,6 +69,11 @@ jobs:
           UV_NO_SYNC: "1"
         run: uv run pytest tests/ --cov --cov-report=xml
 
+      - name: Test dnnlpy package with doctests
+        env:
+          UV_NO_SYNC: "1"
+        run: uv run pytest --doctest-modules src/
+
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v7
         with:
