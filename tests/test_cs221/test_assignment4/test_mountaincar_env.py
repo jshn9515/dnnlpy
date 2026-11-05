@@ -19,6 +19,49 @@ def test_number_line_env_is_registered():
     env.close()
 
 
+def test_number_line_constructor_seed_and_reset_override():
+    env = a4.NumberLineEnv(n=100, seed=11)
+    other = a4.NumberLineEnv(n=100, seed=11)
+    env.reset()
+    other.reset()
+
+    assert env.np_random_seed == other.np_random_seed == 11
+    assert [env.step(0)[0] for _ in range(20)] == [other.step(0)[0] for _ in range(20)]
+
+    rng_state = env.np_random.bit_generator.state
+    env.reset()
+    assert env.np_random.bit_generator.state == rng_state
+
+    env.reset(seed=0)
+    assert env.np_random_seed == 0
+
+    env.close()
+    other.close()
+
+
+def test_mountain_car_constructor_seed_and_reset_override():
+    env = a4.CustomMountainCarEnv(seed=11)
+    other = a4.CustomMountainCarEnv(seed=11)
+    first, _ = env.reset()
+    other_first, _ = other.reset()
+    second, _ = env.reset()
+    other_second, _ = other.reset()
+
+    npt.assert_equal(first, other_first)
+    npt.assert_equal(second, other_second)
+    assert not np.array_equal(first, second)
+
+    seeded, _ = env.reset(seed=0)
+    fresh = a4.CustomMountainCarEnv()
+    expected, _ = fresh.reset(seed=0)
+    npt.assert_equal(seeded, expected)
+    assert env.np_random_seed == 0
+
+    env.close()
+    other.close()
+    fresh.close()
+
+
 @pytest.mark.parametrize(
     'mdp_type', [a4.ContinuousMountainCarMDP, a4.DiscreteMountainCarMDP]
 )
