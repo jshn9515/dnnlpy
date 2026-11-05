@@ -1,0 +1,99 @@
+name: Sync Netlify Preview Deployment
+
+on:
+  status:
+
+permissions:
+  contents: read
+  pull-requests: read
+  deployments: write
+
+jobs:
+  sync:
+    name: Sync Netlify deployment
+    if: >-
+      github.repository == 'jshn9515/dnnlpy' &&
+      github.event.context == 'netlify/dnnlpy/deploy-preview'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Update GitHub Deployment
+        uses: actions/github-script@v9
+        env:
+          STATUS_SHA: ${{ github.event.sha }}
+          STATUS_STATE: ${{ github.event.state }}
+          STATUS_URL: ${{ github.event.target_url }}
+        with:
+          script: |
+            const sha = process.env.STATUS_SHA;
+            const state = process.env.STATUS_STATE;
+            const target = process.env.STATUS_URL;
+
+            if (!/^[a-f0-9]{40}$/i.test(sha)) {
+              throw new Error("Invalid status commit SHA");
+            }
+            const stateMap = {
+              pending: "in_progress",
+              success: "success",
+              failure: "failure",
+              error: "failure",
+            };
+            if (!(state in stateMap)) return;
+
+            // Netlify URLs are used as links only, never executed.
+            let url;
+            try { url = new URL(target); } catch { throw new Error("Missing Netlify URL"); }
+            if (url.protocol !== "https:" ||
+                !/^(deploy-preview-\d+--dnnlpy\.netlify\.app|app\.netlify\.com)$/.test(url.hostname)) {
+              throw new Error(`Unexpected status target: ${target}`);
+            }
+
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              ...context.repo,
+              commit_sha: sha,
+              per_page: 100,
+            });
+            const pr = prs.find(p =>
+              p.state === "open" &&
+              p.base.repo.full_name === `${context.repo.owner}/${context.repo.repo}` &&
+              p.base.ref === "main" &&
+              p.head.sha === sha
+            );
+            if (!pr) {
+              core.info("No current open PR corresponds to this Netlify commit status.");
+              return;
+            }
+
+            const environment = `netlify-preview/pr-${pr.number}`;
+            const { data: deployments } = await github.rest.repos.listDeployments({
+              ...context.repo,
+              sha,
+              environment,
+              per_page: 100,
+            });
+
+            let deployment = deployments[0];
+            if (!deployment) {
+              const response = await github.rest.repos.createDeployment({
+                ...context.repo,
+                ref: sha,
+                environment,
+                auto_merge: false,
+                required_contexts: [],
+                transient_environment: true,
+                production_environment: false,
+                description: `Netlify docs preview for PR #${pr.number}`,
+              });
+              deployment = response.data;
+            }
+
+            const previewUrl = `https://deploy-preview-${pr.number}--dnnlpy.netlify.app/`;
+            await github.rest.repos.createDeploymentStatus({
+              ...context.repo,
+              deployment_id: deployment.id,
+              state: stateMap[state],
+              environment_url: previewUrl,
+              log_url: target,
+              auto_inactive: false,
+              description: `Netlify preview: ${state}`,
+            });
