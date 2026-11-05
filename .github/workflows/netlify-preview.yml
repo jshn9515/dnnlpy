@@ -8,6 +8,10 @@ permissions:
   pull-requests: read
   deployments: write
 
+concurrency:
+  group: netlify-preview-${{ github.event.sha }}
+  cancel-in-progress: false
+
 jobs:
   sync:
     name: Sync Netlify deployment
@@ -15,7 +19,6 @@ jobs:
       github.repository == 'jshn9515/dnnlpy' &&
       github.event.context == 'netlify/dnnlpy/deploy-preview'
     runs-on: ubuntu-latest
-
     steps:
       - name: Update GitHub Deployment
         uses: actions/github-script@v9
