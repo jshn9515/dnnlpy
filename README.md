@@ -2,7 +2,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/dnnlpy)](https://pypi.org/project/dnnlpy/)
 [![Python](https://img.shields.io/pypi/pyversions/dnnlpy.svg)](https://pypi.org/project/dnnlpy/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.14.0-ee4c2c?logo=pytorch)](https://pytorch.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.15.0-ee4c2c?logo=pytorch)](https://pytorch.org/)
 [![dnnlpy-ci](https://github.com/jshn9515/dnnlpy/actions/workflows/dnnlpy-ci.yml/badge.svg)](https://github.com/jshn9515/dnnlpy/actions/workflows/dnnlpy-ci.yml)
 [![dnnlpy-docs](https://github.com/jshn9515/dnnlpy/actions/workflows/build-docs.yml/badge.svg)](https://github.com/jshn9515/dnnlpy/actions/workflows/build-docs.yml)
 [![pre-commit.ci](https://results.pre-commit.ci/badge/github/jshn9515/dnnlpy/main.svg)](https://results.pre-commit.ci/latest/github/jshn9515/dnnlpy/main)
@@ -19,10 +19,12 @@ The package follows a PyTorch-like structure, with lightweight, readable impleme
 
 The APIs follow PyTorch conventions where practical, prioritizing simplicity and readability over framework-level completeness. The package serves as a code supplement to the notes, making examples easier to run, reuse, and extend.
 
+The package also includes code for Stanford courses such as CS221 and CS234. Course modules use the `dnnlpy.csxxx` import path convention (for example, `dnnlpy.cs234`). See the `README.md` files in the course directories for more information.
+
 ## Requirements
 
 - Python 3.12 or newer
-- PyTorch 2.14 or newer
+- PyTorch 2.15 or newer
 
 ## Installation
 
@@ -83,10 +85,10 @@ output, weights = dF.scaled_dot_product_attention(
 )
 ```
 
-## 📄 License
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and contribution guidelines.
+
+## License
 
 This project is licensed under the **MIT License**.
-
-## ⭐ Star History
-
-[![Star History Chart](https://api.star-history.com/chart?repos=datawhalechina/deep-learning-notes&type=date&legend=top-left)](https://www.star-history.com/?repos=datawhalechina%2Fdeep-learning-notes&type=date&legend=top-left)
