@@ -19,9 +19,9 @@ def moving_average(x: np.ndarray, window: int) -> np.ndarray:
 def plot_rewards(
     train_rewards: np.ndarray,
     eval_rewards: np.ndarray,
-    filename: str | os.PathLike[str] | None = None,
-    show: bool = True,
     greedy_eval_rewards: np.ndarray | None = None,
+    path: str | os.PathLike[str] | None = None,
+    show: bool = True,
 ) -> None:
     """Plots the rewards of training and evaluation episodes, with moving averages.
 
@@ -95,7 +95,7 @@ def plot_rewards(
     ax.set_xlabel('Episode')
     ax.set_ylabel('Discounted Reward in Episode')
 
-    if filename is not None:
-        fig.savefig(filename, bbox_inches='tight')
+    if path is not None:
+        fig.savefig(path, bbox_inches='tight')
     if show:
         plt.show()

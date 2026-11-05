@@ -1,22 +1,11 @@
-import random
 from abc import ABC, abstractmethod
-from typing import Literal, NamedTuple, TypedDict, Unpack, override
+from typing import NamedTuple, override
 
-import gymnasium as gym
+import gymnasium.wrappers as wrappers
 import numpy as np
+from gymnasium import spaces
 
-from . import utils
-
-type RenderMode = Literal['human', 'rgb_array']
-
-__all__ = [
-    'MDP',
-    'ContinuousGymMDP',
-    'DiscreteGymMDP',
-    'GymMDP',
-    'MDPTransition',
-    'NumberLineMDP',
-]
+from .env import CustomMountainCarEnv, NumberLineEnv
 
 
 class MDPTransition[StateT, ActionT](NamedTuple):
@@ -40,393 +29,270 @@ class MDPTransition[StateT, ActionT](NamedTuple):
 class MDP[StateT, ActionT](ABC):
     """An abstract class representing a Markov Decision Process (MDP)."""
 
+    discount: float  # Discount factor for future rewards
+    time_limit: int  # Maximum number of steps before the episode is truncated
+
     @property
     @abstractmethod
     def actions(self) -> list[ActionT]:
-        """Returns the list of possible actions at each state."""
+        """Returns the list of actions in the environment."""
 
     @property
     @abstractmethod
-    def discount(self) -> float:
-        r"""Returns the discount factor :math:`\gamma`."""
+    def num_actions(self) -> int:
+        """Returns the number of actions in the environment."""
 
     @property
     @abstractmethod
-    def time_limit(self) -> int:
-        """Returns the maximum number of steps in an episode."""
+    def states(self) -> list[StateT]:
+        """Returns the list of states in the environment."""
 
     @property
     @abstractmethod
-    def start_state(self) -> StateT:
-        """Returns the start state of the MDP."""
+    def num_states(self) -> int:
+        """Returns the number of states in the environment."""
 
     @abstractmethod
-    def reset_state(self) -> None:
+    def reset(self) -> StateT:
         """Resets the MDP to its initial state."""
 
     @abstractmethod
-    def transition(self, action: ActionT) -> MDPTransition[StateT, ActionT]:
+    def step(self, action: ActionT) -> MDPTransition[StateT, ActionT]:
         """Takes action in the current state and returns :class:`MDPTransition`."""
+
+    @abstractmethod
+    def close(self) -> None:
+        """Close the MDP environment and release any resources."""
 
 
 class NumberLineMDP(MDP[int, int]):
-    """A one-dimensional random walk Markov Decision Process.
+    r"""A simple Gymnasium MDP environment representing a number line MDP.
 
     The agent starts at the center of a number line and moves left or right based on the
     selected action's transition probabilities. Each transition produces a reward, and
-    the episode ends when either boundary is reached.
+    the episode ends when either boundary is reached. Observations are mapped from
+    ``[-n, n]`` to contiguous state IDs ``[0, 2n]``.
 
     Args:
-        n (int, optional): The maximum absolute value of the states. The states will be
-            in the range ``[-n, n]``. Defaults to 2.
-        left_reward (float, optional): The reward for reaching the left terminal state
-            ``-n``. Defaults to 10.
-        right_reward (float, optional): The reward for reaching the right terminal state
-            ``n``. Defaults to 50.
-        penalty (float, optional): The penalty for reaching any non-terminal state.
-            Defaults to -5.
-        seed (int, optional): The seed for the random number generator. If ``None``, the
-            random number generator will be initialized randomly. Defaults to ``None``.
+        env (NumberLineEnv): The number line environment to wrap.
+        discount (float, optional): The discount factor :math:`\gamma`. Defaults to 1.0.
+        time_limit (int, optional): The maximum number of steps before the episode is
+            truncated. Defaults to 100.
     """
 
     def __init__(
         self,
-        n: int = 2,
-        left_reward: float = 10,
-        right_reward: float = 50,
-        penalty: float = -5,
-        seed: int | None = None,
+        env: NumberLineEnv,
+        discount: float = 1.0,
+        time_limit: int = 100,
     ):
         """Initialize the ``NumberLineMDP`` with the given parameters."""
-        self.n = n
-        self.left_reward = left_reward
-        self.right_reward = right_reward
-        self.penalty = penalty
-        self.rng = random.Random(seed)
+        self.n = env.n
+        self.discount = discount
+        self.time_limit = time_limit
 
-        self.state = self.start_state
-        self.terminal_states = {-n, n}
-        self.indexer = utils.NumberLineIndexer(n)
-        self.num_states = self.indexer.num_states
+        self.base_env = env
+        self.transformer = wrappers.TransformObservation(
+            env,
+            func=lambda state: state + self.n,
+            observation_space=spaces.Discrete(self.num_states),
+        )
+        self.env = wrappers.TimeLimit(self.transformer, max_episode_steps=time_limit)
 
     @property
     @override
     def actions(self) -> list[int]:
-        return [1, 2]  # 1: move right, 2: move left
+        """Returns the list of actions in the environment."""
+        return self.base_env.actions
 
     @property
     @override
-    def discount(self) -> float:
-        return 1.0
+    def num_actions(self) -> int:
+        """Returns the number of actions in the environment."""
+        return self.base_env.num_actions
 
     @property
     @override
-    def time_limit(self) -> int:
-        return 100
+    def states(self) -> list[int]:
+        """Returns the transformed state IDs in the MDP."""
+        return list(range(self.num_states))
 
     @property
     @override
-    def start_state(self) -> int:
-        """Returns the start state of the MDP."""
-        return 0
-
-    @property
-    def all_states(self) -> list[int]:
-        """Returns a list of all states in the MDP."""
-        return self.indexer.all_states()
+    def num_states(self) -> int:
+        """Returns the number of states in the environment."""
+        return self.base_env.num_states
 
     @override
-    def reset_state(self) -> None:
-        """Reset the MDP to its initial state."""
-        self.state = 0
+    def reset(self, seed: int | None = None) -> int:
+        """Resets the MDP to its initial state."""
+        state, _ = self.env.reset(seed=seed)
+        return state
 
     @override
-    def transition(self, action: int) -> MDPTransition[int, int]:
+    def step(self, action: int) -> MDPTransition[int, int]:
         """Takes action in the current state and returns :class:`MDPTransition`.
 
         Args:
-            action (int): The action to take. Must be either 1 (move right) or 2 (move
-                left).
+            action (int): The action to take. Must be either 0 (move right) or 1 (move left).
 
         Returns:
             MDPTransition: A transition object containing the previous state, action,
             reward, next state, and terminal flag.
         """
-        if self.state in self.terminal_states:
-            raise RuntimeError('Attempting to call transition on a terminated MDP.')
+        state = self.base_env.state + self.n
+        next_state, reward, terminated, truncated, _ = self.env.step(action)
+        terminal = terminated or truncated
 
-        if action == 1:
-            forward_prob = 0.2
-        elif action == 2:
-            forward_prob = 0.3
-        else:
-            raise ValueError('Invalid action provided.')
-
-        prev_state = self.state
-        if self.rng.random() < forward_prob:
-            self.state += 1  # Move the agent forward
-        else:
-            self.state -= 1  # Move the agent backward
-
-        if self.state == self.n:
-            reward = self.right_reward
-        elif self.state == -self.n:
-            reward = self.left_reward
-        else:
-            reward = self.penalty
-
-        # Check for termination
-        terminal = self.state in self.terminal_states
-
-        transition = MDPTransition(prev_state, action, reward, self.state, terminal)
+        transition = MDPTransition(state, action, float(reward), next_state, terminal)
         return transition
 
-    def state_to_index(self, state: int) -> int:
-        """Returns the index of the number line state."""
-        return self.indexer.to_index(state)
-
-    def index_to_state(self, index: int) -> int:
-        """Returns the number line state with index."""
-        return self.indexer.from_index(index)
+    @override
+    def close(self) -> None:
+        """Close the ``NumberLineMDP`` environment."""
+        self.env.close()
 
 
-class GymMDPKwargs(TypedDict, total=False):
-    """A dictionary for storing custom keyword arguments."""
-
-    min_position: float
-    max_position: float
-    max_speed: float
-    goal_position: float
-    goal_velocity: float
-    force: float
-    gravity: float
-
-
-class GymMDP(MDP[np.ndarray, int]):
-    r"""Base class for MDPs wrapping Gymnasium environments with discrete action spaces.
-
-    Provides a common interface for interacting with Gymnasium environments, including
-    support for custom speed limits, discounting, and episode time limits.
+class MountainCarMDP[StateT](MDP[StateT, int]):
+    r"""Base class for MountainCarMDP, which wraps a Gymnasium MountainCar environment.
 
     Args:
-        env (str): Gymnasium environment ID, such as 'MountainCar-v0'.
+        env (CustomMountainCarEnv): The Gymnasium environment to wrap.
         discount (float, optional): Discount factor :math:`\gamma` for future rewards.
             Defaults to 0.99.
         time_limit (int, optional): Maximum number of steps per episode. If ``None``,
-            uses the environment's default time limit.
-        seed (int, optional): Seed for the random number generator. If ``None``, the
-            random number generator will be initialized randomly. Defaults to ``None``.
-        **custom_kwargs (dict[str, Any]): Additional keyword arguments to pass to the
-            environment. Only supported by 'CustomMountainCar-v0'.
+            uses the environment's default time limit. Defaults to 200.
     """
 
     def __init__(
         self,
-        env: str,
+        env: CustomMountainCarEnv,
         discount: float = 0.99,
-        time_limit: int | None = None,
-        render_mode: RenderMode | None = None,
-        seed: int | None = None,
-        **custom_kwargs: Unpack[GymMDPKwargs],
+        time_limit: int = 200,
     ):
-        """Initialize the ``GymMDP`` with the given parameters."""
-        if custom_kwargs:
-            if env != 'CustomMountainCar-v0':
-                raise AssertionError(
-                    f'{custom_kwargs} is only supported for `CustomMountainCar-v0`.',
-                )
-            self.env = gym.make(env, render_mode=render_mode, **custom_kwargs)
-        else:
-            self.env = gym.make(env, render_mode=render_mode)
+        """Initialize the ``MountainCarMDP`` with the given parameters."""
+        self.discount = discount
+        self.time_limit = time_limit
 
-        if not isinstance(self.env, gym.wrappers.TimeLimit):
-            raise TypeError('GymMDP only supports environments wrapped in TimeLimit.')
-        if not isinstance(self.env.action_space, gym.spaces.Discrete):
-            raise TypeError(
-                'GymMDP only supports environments with discrete action spaces.'
-            )
-        if not isinstance(self.env.observation_space, gym.spaces.Box):
-            raise TypeError(
-                'GymMDP only supports environments with Box observation spaces.'
-            )
-
-        if time_limit is not None:
-            self.env._max_episode_steps = time_limit
-
-        self._actions = list(range(self.env.action_space.n))
-        self._discount = discount
-        self._time_limit = self.env._max_episode_steps
-        self.custom_kwargs = custom_kwargs
-        self.seed = seed
-        self.rng = np.random.default_rng(seed)
-
-        self.state, _ = self.env.reset(seed=seed)
-        self.low = self.env.observation_space.low
-        self.high = self.env.observation_space.high
+        self.base_env = env
+        self.env = wrappers.TimeLimit(env, max_episode_steps=time_limit)
 
     @property
     @override
     def actions(self) -> list[int]:
-        return self._actions.copy()
+        """Returns the list of discrete actions in the MDP."""
+        return self.base_env.actions
 
     @property
     @override
-    def discount(self) -> float:
-        return self._discount
+    def num_actions(self) -> int:
+        """Returns the number of discrete actions in the MDP."""
+        return self.base_env.num_actions
 
     @property
     @override
-    def time_limit(self) -> int:
-        return self._time_limit
+    def states(self) -> list[StateT]:
+        """Returns the list of discrete states in the MDP."""
+        return self.base_env.states
+
+    @property
+    @override
+    def num_states(self) -> int:
+        """Returns the number of discrete states in the MDP."""
+        return self.base_env.num_states
 
     @override
-    def reset_state(self) -> None:
-        """Reset the Gymnasium environment to its initial state."""
-        self.rng = np.random.default_rng(self.seed)
-        self.state, _ = self.env.reset(seed=self.seed)
+    def reset(self, seed: int | None = None) -> StateT:
+        """Resets the MDP to its initial state."""
+        state, _ = self.env.reset(seed=seed)
+        return state
 
-    def reward(self, next_state: np.ndarray, original_reward: float) -> float:
-        """Compute the reward for transitioning to the given continuous state.
-
-        For ``MountainCar`` environments, replaces the original reward with a shaped
-        reward based on the car's position relative to the maximum position and the
-        magnitude of its velocity. For other environments, the original reward is
-        returned unchanged.
-
-        Args:
-            next_state (np.ndarray): Continuous state after the transition, containing
-                the car's position and velocity.
-            original_reward (float): Reward provided by the environment.
-
-        Returns:
-            float: Shaped reward for MountainCar environments, or the original reward for
-            other environments.
-        """
-        if self.env.unwrapped.spec is None:
-            raise AssertionError('Environment spec is not available.')
-
-        if 'MountainCar-v0' in self.env.unwrapped.spec.id:
-            # reward fn based on position and velocity
-            position_reward = -(self.high[0] - next_state[0])
-            velocity_reward = -(self.high[1] - np.abs(next_state[1]))
-            return position_reward + velocity_reward
-        else:
-            return original_reward
-
+    @override
     def close(self) -> None:
-        """Close the Gymnasium environment."""
+        """Close the Gym environment and release any resources."""
         self.env.close()
 
 
-class ContinuousGymMDP(GymMDP):
-    """Gymnasium MDP whose state is the continuous observation array."""
-
-    @property
-    @override
-    def start_state(self) -> np.ndarray:
-        """Returns the start state of the MDP."""
-        self.reset_state()
-        return self.state
+class ContinuousMountainCarMDP(MountainCarMDP[np.ndarray]):
+    """Mountain CarMDP whose state is the continuous observation array."""
 
     @override
-    def transition(self, action: int) -> MDPTransition[np.ndarray, int]:
+    def step(self, action: int) -> MDPTransition[np.ndarray, int]:
         """Takes action in the current state and returns :class:`MDPTransition`."""
-        state = self.state
+        state = np.asarray(self.base_env.state, dtype=np.float32).copy()
         next_state, reward, terminated, truncated, _ = self.env.step(action)
-        self.state = next_state
-
-        reward = self.reward(next_state, float(reward))
         terminal = terminated or truncated
-        return MDPTransition(state, action, reward, next_state, terminal)
+
+        transition = MDPTransition(state, action, float(reward), next_state, terminal)
+        return transition
 
 
-class DiscreteGymMDP(GymMDP):
-    r"""Gymnasium MDP with each observation dimension mapped to a bin.
+class DiscreteMountainCarMDP(MountainCarMDP[int]):
+    r"""MountainCar MDP with each observation dimension mapped to a bin.
 
     Args:
-        env (str): Gymnasium environment ID.
-        bins (int | list[int], optional): Bin edges per observation dimension.
-        low (list[float], optional): Lower observation bounds.
-        high (list[float], optional): Upper observation bounds.
+        env (CustomMountainCarEnv): The Gymnasium environment to wrap.
+        bins (int | tuple[int, ...], optional): Bin edges per observation dimension.
         discount (float, optional): Discount factor :math:`\gamma` for future rewards.
             Defaults to 0.99.
         time_limit (int, optional): Maximum number of steps per episode. If ``None``,
-            uses the environment's default time limit.
-        seed (int, optional): Seed for the random number generator. If ``None``, the
-            random number generator will be initialized randomly. Defaults to ``None``.
-        **custom_kwargs (dict[str, Any]): Additional keyword arguments to pass to the
-            environment. Only supported by 'CustomMountainCar-v0'.
+            uses the environment's default time limit. Defaults to 200.
     """
 
     def __init__(
         self,
-        env: str,
-        bins: int | list[int] = 10,
-        low: list[float] | None = None,
-        high: list[float] | None = None,
+        env: CustomMountainCarEnv,
+        bins: int | tuple[int, ...] = 10,
         discount: float = 0.99,
-        time_limit: int | None = None,
-        render_mode: RenderMode | None = None,
-        seed: int | None = None,
-        **custom_kwargs: Unpack[GymMDPKwargs],
+        time_limit: int = 200,
     ):
         """Initialize the ``DiscreteGymMDP`` with the given parameters."""
-        super().__init__(
-            env,
-            discount=discount,
-            time_limit=time_limit,
-            render_mode=render_mode,
-            seed=seed,
-            **custom_kwargs,
-        )
-
-        if not isinstance(self.env.observation_space, gym.spaces.Box):
-            raise TypeError(
-                'DiscreteGymMDP only supports environments with Box observation spaces.'
-            )
-        if len(self.env.observation_space.shape) != 1:
-            raise AssertionError(
-                'DiscreteGymMDP only supports environments with 1D observation spaces.'
-            )
-
-        if low is not None:
-            self.low = low
-        if high is not None:
-            self.high = high
-
-        # Convert the environment to a discretized version
-        self.bins = utils.create_bins(self.low, self.high, bins)
-        self.indexer = utils.BinnedStateIndexer(self.bins)
-        self.num_states = self.indexer.num_states
+        super().__init__(env, discount=discount, time_limit=time_limit)
+        self.discretizer = wrappers.DiscretizeObservation(self.base_env, bins=bins)
+        self.env = wrappers.TimeLimit(self.discretizer, max_episode_steps=time_limit)
 
     @property
     @override
-    def start_state(self) -> np.ndarray:
-        """Returns the start state of the MDP."""
-        self.reset_state()
-        return utils.discretize(self.state, self.bins)
+    def actions(self) -> list[int]:
+        """Returns the list of discrete actions in the MDP."""
+        return self.base_env.actions
 
     @property
-    def all_states(self) -> list[int]:
-        """Returns a list of all states in the MDP."""
-        return self.indexer.all_states()
+    @override
+    def num_actions(self) -> int:
+        """Returns the number of discrete actions in the MDP."""
+        return self.base_env.num_actions
+
+    @property
+    @override
+    def states(self) -> list[int]:
+        """Returns the list of discrete states in the MDP."""
+        if isinstance(self.discretizer.observation_space, spaces.Discrete):
+            return list(range(self.discretizer.observation_space.n))
+        else:
+            raise NotImplementedError('Observation space is not discrete.')
+
+    @property
+    @override
+    def num_states(self) -> int:
+        """Returns the number of discrete states in the MDP."""
+        if isinstance(self.discretizer.observation_space, spaces.Discrete):
+            return self.discretizer.observation_space.n
+        else:
+            raise NotImplementedError('Observation space is not discrete.')
 
     @override
-    def transition(self, action: int) -> MDPTransition[np.ndarray, int]:
+    def reset(self, seed: int | None = None) -> int:
+        """Resets the MDP to its initial state."""
+        state, _ = self.env.reset(seed=seed)
+        return state
+
+    @override
+    def step(self, action: int) -> MDPTransition[int, int]:
         """Takes action in the current state and returns :class:`MDPTransition`."""
-        state = utils.discretize(self.state, self.bins)
+        state = int(self.discretizer.observation(self.base_env.state))
         next_state, reward, terminated, truncated, _ = self.env.step(action)
-        self.state = next_state
-
-        reward = self.reward(next_state, float(reward))
-        next_state = utils.discretize(next_state, self.bins)
         terminal = terminated or truncated
-        return MDPTransition(state, action, reward, next_state, terminal)
 
-    def state_to_index(self, state: np.ndarray) -> int:
-        """Returns the flat index of the discretized state."""
-        return self.indexer.to_index(state)
-
-    def index_to_state(self, index: int) -> tuple[int, ...]:
-        """Returns the discretized state with index."""
-        return self.indexer.from_index(index)
+        transition = MDPTransition(state, action, float(reward), next_state, terminal)
+        return transition

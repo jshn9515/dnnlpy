@@ -36,6 +36,11 @@ jobs:
         uses: astral-sh/setup-uv@v10.3.0
         with:
           enable-cache: true
+          prune-cache: true
+          cache-suffix: docs
+          cache-dependency-glob: |
+            pyproject.toml
+            uv.lock
 
       - name: Install dependencies
         run: uv sync --python 3.14 --locked --extra docs

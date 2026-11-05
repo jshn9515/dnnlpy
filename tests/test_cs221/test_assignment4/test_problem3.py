@@ -17,30 +17,38 @@ def run_vi_over_number_line(mdp: a4.NumberLineMDP) -> np.ndarray:
     rewards = np.zeros_like(transitions)
     valid_actions = np.zeros((mdp.num_states, len(actions)), dtype=np.bool)
 
-    for state_idx, state in enumerate(mdp.indexer.all_states()):
-        if state in mdp.terminal_states:
+    for state_idx, state in enumerate(range(-mdp.n, mdp.n + 1)):
+        if state in mdp.base_env.terminal_states:
             continue
 
         valid_actions[state_idx, :] = True
         for action_idx, action in enumerate(actions):
-            forward_prob = 0.2 if action == 1 else 0.3
+            forward_prob = 0.2 if action == 0 else 0.3
             backward_prob = 1.0 - forward_prob
             forward_state = state + 1
             backward_state = state - 1
 
             forward_reward = (
-                mdp.right_reward
+                mdp.base_env.right_reward
                 if forward_state == mdp.n
-                else (mdp.left_reward if forward_state == -mdp.n else mdp.penalty)
+                else (
+                    mdp.base_env.left_reward
+                    if forward_state == -mdp.n
+                    else mdp.base_env.penalty
+                )
             )
             backward_reward = (
-                mdp.right_reward
+                mdp.base_env.right_reward
                 if backward_state == mdp.n
-                else (mdp.left_reward if backward_state == -mdp.n else mdp.penalty)
+                else (
+                    mdp.base_env.left_reward
+                    if backward_state == -mdp.n
+                    else mdp.base_env.penalty
+                )
             )
 
-            forward_idx = mdp.state_to_index(forward_state)
-            backward_idx = mdp.state_to_index(backward_state)
+            forward_idx = forward_state + mdp.n
+            backward_idx = backward_state + mdp.n
             transitions[state_idx, action_idx, forward_idx] += forward_prob
             rewards[state_idx, action_idx, forward_idx] = forward_reward
             transitions[state_idx, action_idx, backward_idx] += backward_prob
@@ -53,12 +61,12 @@ def run_vi_over_number_line(mdp: a4.NumberLineMDP) -> np.ndarray:
 
 @timeout
 def test_problem_3a_0():
-    mdp = a4.NumberLineMDP()
+    mdp = a4.NumberLineMDP(a4.NumberLineEnv())
     pi = run_vi_over_number_line(mdp)
-    gold = {-1: 1, 0: 2, 1: 2}
+    gold = {-1: 0, 0: 1, 1: 1}
 
     for key, expected in gold.items():
-        idx = mdp.state_to_index(key)
+        idx = key + mdp.n
         if not mdp.actions[pi[idx]] == expected:
             raise AssertionError(
                 f'Incorrect pi for the state {key}: expected {expected}, '
@@ -68,13 +76,16 @@ def test_problem_3a_0():
 
 @timeout
 def test_problem_3a_1():
-    mdp = a4.NumberLineMDP(20, left_reward=10, right_reward=30, penalty=-1)
+    mdp = a4.NumberLineMDP(
+        a4.NumberLineEnv(20, left_reward=10, right_reward=30, penalty=-1)
+    )
     pi = run_vi_over_number_line(mdp)
     with open(FIXTURES_PATH / '3a-1-gold.json') as fp:
         gold: dict[str, int] = json.load(fp)
 
     for key, expected in gold.items():
-        idx = mdp.state_to_index(int(key))
+        idx = int(key) + mdp.n
+        expected -= 1  # Fixture uses the original actions 1 and 2.
         if not mdp.actions[pi[idx]] == expected:
             raise AssertionError(
                 f'Incorrect pi for the state {key}: expected {expected}, '
@@ -127,7 +138,7 @@ def test_problem_3a_1():
 
 @timeout(seconds=15)
 def test_problem_3a_2_hidden():
-    mdp = a4.NumberLineMDP(n=200)
+    mdp = a4.NumberLineMDP(a4.NumberLineEnv(n=200))
     run_vi_over_number_line(mdp)
 
 
@@ -136,13 +147,12 @@ def make_rl(
     calc_val_iter_every: int = 10000,
     epsilon: float = 0.2,
     seed: int | None = None,
-) -> a4.ModelBasedMonteCarlo[int, int]:
+) -> a4.ModelBasedMonteCarlo[int]:
     """Make a ModelBasedMonteCarlo instance for the given MDP."""
     return a4.ModelBasedMonteCarlo(
         mdp.actions,
         mdp.discount,
         mdp.num_states,
-        mdp.state_to_index,
         calc_val_iter_every=calc_val_iter_every,
         epsilon=epsilon,
         seed=seed,
@@ -151,12 +161,12 @@ def make_rl(
 
 @timeout
 def test_problem_3b_0():
-    mdp = a4.NumberLineMDP()
+    mdp = a4.NumberLineMDP(a4.NumberLineEnv())
     rl = make_rl(mdp, calc_val_iter_every=1)
 
     rl.pi_indices = np.full(mdp.num_states, -1, dtype=np.int8)
-    for state, action in {-1: 1, 0: 2, 1: 2}.items():
-        state = mdp.state_to_index(state)
+    for state, action in {-1: 0, 0: 1, 1: 1}.items():
+        state = state + mdp.n
         action = rl.actions.index(action)
         rl.pi_indices[state] = action
 
@@ -165,8 +175,8 @@ def test_problem_3b_0():
 
     for _ in range(10000):
         for state in range(-mdp.n + 1, mdp.n):
-            idx = mdp.state_to_index(state)
-            action = rl.get_action(state)
+            idx = state + mdp.n
+            action = rl.get_action(state + mdp.n)
             if rl.actions[rl.pi_indices[idx]] == action:
                 counter[state] += 1
 
@@ -183,18 +193,18 @@ def test_problem_3b_0():
 
 @timeout
 def test_problem_3b_1():
-    mdp = a4.NumberLineMDP()
+    mdp = a4.NumberLineMDP(a4.NumberLineEnv())
 
     rl = make_rl(mdp, calc_val_iter_every=100)
     rl.num_iters = 1
-    rl.step(a4.MDPTransition(1, 1, 50, 2, True))
-    rl.step(a4.MDPTransition(1, 1, -5, 0, False))
+    rl.step(a4.MDPTransition(3, 0, 50, 4, True))
+    rl.step(a4.MDPTransition(3, 0, -5, 2, False))
     rl.num_iters = 100
-    rl.step(a4.MDPTransition(-1, 2, 10, -2, True))
+    rl.step(a4.MDPTransition(1, 1, 10, 0, True))
 
-    gold = {-1: 2, 1: 1}
+    gold = {-1: 1, 1: 0}
     for state, expected in gold.items():
-        idx = mdp.state_to_index(state)
+        idx = state + mdp.n
         action = rl.actions[rl.pi_indices[idx]]
 
         if not action == expected:
@@ -202,23 +212,23 @@ def test_problem_3b_1():
                 f'Incorrect policy for state {state}: expected {expected}, got {action}.'
             )
 
-    # In state 1, action 1 led to state 0 once with reward -5,
-    # and action 2 led to state 0 once and to state 2 once,
+    # In state 1, action 0 led to state 0 once with reward -5,
+    # and action 1 led to state 0 once and to state 2 once,
     # with reward -8 each time. State 0 has no experience yet,
     # so it counts as an end state with value 0.
-    # The estimated Q-values are -5 for action 1,
-    # 0.5 * -8 + 0.5 * -8 = -8 for action 2,
-    # so the policy picks action 1.
+    # The estimated Q-values are -5 for action 0,
+    # 0.5 * -8 + 0.5 * -8 = -8 for action 1,
+    # so the policy picks action 0.
     rl = make_rl(mdp, calc_val_iter_every=100)
     rl.num_iters = 1
-    rl.step(a4.MDPTransition(1, 1, -5, 0, False))
-    rl.step(a4.MDPTransition(1, 2, -8, 0, False))
-    rl.step(a4.MDPTransition(1, 2, -8, 2, True))
+    rl.step(a4.MDPTransition(3, 0, -5, 2, False))
+    rl.step(a4.MDPTransition(3, 1, -8, 2, False))
+    rl.step(a4.MDPTransition(3, 1, -8, 4, True))
     rl.num_iters = 100
-    rl.step(a4.MDPTransition(-1, 1, -5, 0, False))
+    rl.step(a4.MDPTransition(1, 0, -5, 2, False))
 
-    idx = mdp.state_to_index(1)
-    if not rl.actions[rl.pi_indices[idx]] == 1:
+    idx = 1 + mdp.n
+    if not rl.actions[rl.pi_indices[idx]] == 0:
         raise AssertionError(
             'Incorrect policy for state 1 when an action has several next states. '
             "Check how you estimate the average reward of each `(s, a, s')`."
@@ -227,27 +237,27 @@ def test_problem_3b_1():
 
 @timeout
 def test_problem_3b_2():
-    mdp = a4.NumberLineMDP()
+    mdp = a4.NumberLineMDP(a4.NumberLineEnv())
     rl = make_rl(mdp, calc_val_iter_every=100)
     rl.num_iters = 1
-    rl.step(a4.MDPTransition(0, 1, -5, 1, False))
-    rl.step(a4.MDPTransition(0, 1, -5, 1, False))
-    rl.step(a4.MDPTransition(0, 1, -5, -1, False))
-    rl.step(a4.MDPTransition(0, 2, -5, 1, False))
-    rl.step(a4.MDPTransition(0, 2, -5, -1, False))
-    rl.step(a4.MDPTransition(1, 1, 50, 2, True))
-    rl.step(a4.MDPTransition(1, 1, 50, 2, True))
-    rl.step(a4.MDPTransition(1, 1, -5, 0, False))
-    rl.step(a4.MDPTransition(1, 2, 50, 2, True))
-    rl.step(a4.MDPTransition(1, 2, -5, 0, False))
-    rl.step(a4.MDPTransition(-1, 1, -5, 0, False))
-    rl.step(a4.MDPTransition(-1, 2, -5, 0, False))
+    rl.step(a4.MDPTransition(2, 0, -5, 3, False))
+    rl.step(a4.MDPTransition(2, 0, -5, 3, False))
+    rl.step(a4.MDPTransition(2, 0, -5, 1, False))
+    rl.step(a4.MDPTransition(2, 1, -5, 3, False))
+    rl.step(a4.MDPTransition(2, 1, -5, 1, False))
+    rl.step(a4.MDPTransition(3, 0, 50, 4, True))
+    rl.step(a4.MDPTransition(3, 0, 50, 4, True))
+    rl.step(a4.MDPTransition(3, 0, -5, 2, False))
+    rl.step(a4.MDPTransition(3, 1, 50, 4, True))
+    rl.step(a4.MDPTransition(3, 1, -5, 2, False))
+    rl.step(a4.MDPTransition(1, 0, -5, 2, False))
+    rl.step(a4.MDPTransition(1, 1, -5, 2, False))
     rl.num_iters = 100
-    rl.step(a4.MDPTransition(-1, 2, 10, -2, True))
+    rl.step(a4.MDPTransition(1, 1, 10, 0, True))
 
-    gold = {-1: 1, 0: 1, 1: 1}
+    gold = {-1: 0, 0: 0, 1: 0}
     for state, expected in gold.items():
-        idx = mdp.state_to_index(state)
+        idx = state + mdp.n
         actual = rl.actions[rl.pi_indices[idx]]
         if not actual == expected:
             raise AssertionError(
@@ -258,17 +268,17 @@ def test_problem_3b_2():
 
 @timeout
 def test_problem_3b_3():
-    mdp = a4.NumberLineMDP()
+    mdp = a4.NumberLineMDP(a4.NumberLineEnv())
     rl = make_rl(mdp, calc_val_iter_every=100)
 
     counts = {}
-    for state in mdp.all_states:
+    for state in range(-mdp.n, mdp.n + 1):
         counts[state] = 0
 
     for _ in range(10000):
         for state in counts:
-            action = rl.get_action(state)
-            if action == 1:
+            action = rl.get_action(state + mdp.n)
+            if action == 0:
                 counts[state] += 1
 
     if counts[-mdp.n] < 4000 or counts[mdp.n] > 6000:

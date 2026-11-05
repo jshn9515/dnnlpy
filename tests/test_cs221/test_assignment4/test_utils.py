@@ -8,83 +8,6 @@ import dnnlpy.cs221.assignment4 as a4
 import dnnlpy.cs221.assignment4.utils as utils
 
 
-def test_number_line_indexer_round_trip():
-    indexer = utils.NumberLineIndexer(2)
-
-    assert indexer.num_states == 5
-    assert indexer.all_states() == [-2, -1, 0, 1, 2]
-    assert [indexer.to_index(s) for s in indexer.all_states()] == list(range(5))
-    assert [indexer.from_index(i) for i in range(5)] == indexer.all_states()
-
-
-def test_create_bins_supports_different_edge_counts():
-    bins = utils.create_bins([-1.0, 0.0], [1.0, 6.0], [3, 4])
-
-    npt.assert_allclose(bins[0], [-1.0, 0.0, 1.0])
-    npt.assert_allclose(bins[1], [0.0, 2.0, 4.0, 6.0])
-
-
-def test_create_bins_uses_same_edge_count_for_all_dimensions():
-    bins = utils.create_bins([-1.0, 0.0], [1.0, 6.0], 3)
-
-    npt.assert_allclose(bins[0], [-1.0, 0.0, 1.0])
-    npt.assert_allclose(bins[1], [0.0, 3.0, 6.0])
-
-
-@pytest.mark.parametrize(
-    ('observation', 'expected'),
-    [
-        ([-2.0, -1.0], [0, 0]),
-        ([-1.0, 0.0], [1, 1]),
-        ([0.5, 3.0], [2, 2]),
-        ([1.0, 6.0], [3, 4]),
-        ([2.0, 7.0], [3, 4]),
-    ],
-)
-def test_discretize_handles_edges_and_out_of_range_values(
-    observation: list[float], expected: list[int]
-):
-    x = np.array(observation)
-    bins = utils.create_bins([-1.0, 0.0], [1.0, 6.0], [3, 4])
-
-    actual = utils.discretize(x, bins)
-    npt.assert_equal(actual, expected)
-
-
-def test_binned_state_indexer_is_one_to_one_for_all_bin_pairs():
-    bins = utils.create_bins([-1.0, 0.0], [1.0, 6.0], [2, 3])
-    indexer = utils.BinnedStateIndexer(bins)
-    indices = [
-        indexer.to_index(np.array([position, velocity]))
-        for position in range(3)
-        for velocity in range(4)
-    ]
-
-    assert indexer.num_states == 12
-    assert indices == indexer.all_states()
-
-    for index in indices:
-        state = np.array(indexer.from_index(index))
-        assert indexer.to_index(state) == index
-
-
-def test_binned_state_indexer_flattens_existing_bin_numbers():
-    bins = utils.create_bins([-1.2, -0.07], [0.6, 0.07], 20)
-    indexer = utils.BinnedStateIndexer(bins)
-
-    assert indexer.to_index(np.array([8, 11])) == 8 * 21 + 11
-    assert indexer.from_index(8 * 21 + 11) == (8, 11)
-
-
-@pytest.mark.parametrize('state', [[-1, 0], [0, 4]])
-def test_binned_state_indexer_rejects_invalid_bin_numbers(state: list[int]):
-    bins = utils.create_bins([-1.0, 0.0], [1.0, 6.0], [2, 3])
-    indexer = utils.BinnedStateIndexer(bins)
-
-    with pytest.raises(ValueError):
-        indexer.to_index(np.array(state))
-
-
 def test_polynomial_feature_extractor_with_scaling():
     actual = utils.polynomial_feature_extractor(
         np.array([2.0, 3.0]), degree=1, scale=[0.5, 2.0]
@@ -103,34 +26,37 @@ def test_fourier_feature_extractor_for_two_features():
 
 class TwoStepMDP(a4.MDP[int, int]):
     state = 0
+    discount = 0.5
+    time_limit = 3
 
     @property
     def actions(self) -> list[int]:
         return [1]
 
     @property
-    def discount(self) -> float:
-        return 0.5
+    def num_actions(self) -> int:
+        return 1
 
     @property
-    def time_limit(self) -> int:
+    def states(self) -> list[int]:
+        return [0, 1, 2]
+
+    @property
+    def num_states(self) -> int:
         return 3
 
-    @property
-    def start_state(self) -> int:
-        self.reset_state()
+    def reset(self) -> int:
+        self.state = 0
         return self.state
 
-    def reset_state(self) -> None:
-        self.state = 0
-
-    def transition(self, action: int) -> a4.MDPTransition[int, int]:
+    def step(self, action: int) -> a4.MDPTransition[int, int]:
         state = self.state
         self.state += 1
+        terminal = self.state == 2
+        return a4.MDPTransition(state, action, self.state, self.state, terminal)
 
-        return a4.MDPTransition(
-            state, action, float(self.state), self.state, self.state == 2
-        )
+    def close(self) -> None:
+        pass
 
 
 def test_simulate_stops_on_terminal_and_discounts_rewards():
@@ -143,13 +69,40 @@ def test_simulate_stops_on_terminal_and_discounts_rewards():
 
 
 def test_simulate_resets_number_line_between_episodes():
-    mdp = a4.NumberLineMDP(n=1, seed=0)
-    rl = a4.FixedRLAlgorithm({0: 1}, mdp.actions, epsilon=0)
+    env = a4.NumberLineEnv(n=1, seed=0)
+    mdp = a4.NumberLineMDP(env)
+    rl = a4.FixedRLAlgorithm({mdp.n: 0}, mdp.actions, epsilon=0)
 
     rewards = utils.simulate(mdp, rl, num_episodes=2, train=False, verbose=False)
 
     assert len(rewards) == 2
-    assert set(rewards).issubset({mdp.left_reward, mdp.right_reward})
+    assert set(rewards).issubset({mdp.base_env.left_reward, mdp.base_env.right_reward})
+
+
+def test_number_line_mdp_transforms_observations_to_indices():
+    mdp = a4.NumberLineMDP(a4.NumberLineEnv(n=1), time_limit=2)
+
+    assert mdp.states == [0, 1, 2]
+    assert mdp.num_states == 3
+    assert mdp.reset(seed=0) == 1
+
+    transition = mdp.step(0)
+    assert transition.state == 1
+    assert transition.next_state == mdp.base_env.state + mdp.n
+    assert transition.next_state in (0, 2)
+    assert transition.terminal
+
+    mdp.close()
+
+
+def test_number_line_indices_work_with_tabular_learning():
+    mdp = a4.NumberLineMDP(a4.NumberLineEnv(n=1))
+    rl = a4.TabularQLearning(mdp.actions, mdp.discount, mdp.num_states, epsilon=0)
+
+    utils.simulate(mdp, rl, num_episodes=1, verbose=False)
+
+    assert np.count_nonzero(rl.Q[mdp.n]) == 1
+    mdp.close()
 
 
 class NoActionAfterFirstStep(a4.RLAlgorithm[int, int]):

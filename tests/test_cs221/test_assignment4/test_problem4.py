@@ -13,118 +13,115 @@ FIXTURES_PATH = Path(__file__).parent / 'fixtures'
 
 @timeout
 def test_problem_4a_0():
-    mdp = a4.NumberLineMDP()
+    mdp = a4.NumberLineMDP(a4.NumberLineEnv())
     rl = a4.TabularQLearning(
         mdp.actions,
         mdp.discount,
         mdp.num_states,
-        mdp.state_to_index,
         epsilon=0.15,
     )
 
-    rl.step(a4.MDPTransition(0, 1, -5, 1, False))
+    rl.step(a4.MDPTransition(2, 0, -5, 3, False))
 
-    assert rl.Q[mdp.state_to_index(1), mdp.actions.index(2)] == 0
-    assert rl.Q[mdp.state_to_index(1), mdp.actions.index(1)] == 0
-    assert rl.Q[mdp.state_to_index(0), mdp.actions.index(1)] == -0.5
+    assert rl.Q[1 + mdp.n, mdp.actions.index(1)] == 0
+    assert rl.Q[1 + mdp.n, mdp.actions.index(0)] == 0
+    assert rl.Q[mdp.n, mdp.actions.index(0)] == -0.5
 
-    rl.step(a4.MDPTransition(1, 1, 50, 2, True))
+    rl.step(a4.MDPTransition(3, 0, 50, 4, True))
 
-    assert rl.Q[mdp.state_to_index(1), mdp.actions.index(1)] == 5.0
-    assert rl.Q[mdp.state_to_index(1), mdp.actions.index(2)] == 0
-    assert rl.Q[mdp.state_to_index(0), mdp.actions.index(1)] == -0.5
+    assert rl.Q[1 + mdp.n, mdp.actions.index(0)] == 5.0
+    assert rl.Q[1 + mdp.n, mdp.actions.index(1)] == 0
+    assert rl.Q[mdp.n, mdp.actions.index(0)] == -0.5
 
-    rl.step(a4.MDPTransition(-1, 2, -5, 0, False))
+    rl.step(a4.MDPTransition(1, 1, -5, 2, False))
 
-    assert rl.Q[mdp.state_to_index(1), mdp.actions.index(1)] == 5.0
-    assert rl.Q[mdp.state_to_index(1), mdp.actions.index(2)] == 0
-    assert rl.Q[mdp.state_to_index(0), mdp.actions.index(1)] == -0.5
-    assert rl.Q[mdp.state_to_index(0), mdp.actions.index(2)] == 0
-    assert rl.Q[mdp.state_to_index(-1), mdp.actions.index(2)] == -0.5
+    assert rl.Q[1 + mdp.n, mdp.actions.index(0)] == 5.0
+    assert rl.Q[1 + mdp.n, mdp.actions.index(1)] == 0
+    assert rl.Q[mdp.n, mdp.actions.index(0)] == -0.5
+    assert rl.Q[mdp.n, mdp.actions.index(1)] == 0
+    assert rl.Q[mdp.n - 1, mdp.actions.index(1)] == -0.5
 
     # The number line MDP has discount 1 and the Q-values above start at 0,
     # so we also check the same updates with a discount of 0.9 and initial_q=1.
     # The Q-values of the end state 2 are never updated, so they stay at 1: a transition
     # to a terminal state has to use 0 as the value of the next state instead.
     rl = a4.TabularQLearning(
-        mdp.actions,
-        0.9,
-        mdp.num_states,
-        mdp.state_to_index,
+        actions=mdp.actions,
+        discount=0.9,
+        num_states=mdp.num_states,
         epsilon=0.15,
         initial_q=1.0,
     )
 
     # 1 + 0.1 * (50 + 0 - 1) = 5.9
-    rl.step(a4.MDPTransition(1, 1, 50, 2, True))
-    if not rl.Q[mdp.state_to_index(1), mdp.actions.index(1)] == 5.9:
+    rl.step(a4.MDPTransition(3, 0, 50, 4, True))
+    if not rl.Q[1 + mdp.n, mdp.actions.index(0)] == 5.9:
         raise AssertionError(
             'Incorrect Q-value after a transition to a terminal state.'
         )
 
     # 1 + 0.1 * (-5 + 0.9 * 5.9 - 1) = 0.931
-    rl.step(a4.MDPTransition(0, 2, -5, 1, False))
-    if not rl.Q[mdp.state_to_index(0), mdp.actions.index(2)] == 0.931:
+    rl.step(a4.MDPTransition(2, 1, -5, 3, False))
+    if not rl.Q[mdp.n, mdp.actions.index(1)] == 0.931:
         raise AssertionError('Incorrect Q-value with discount 0.9')
 
-    assert rl.Q[mdp.state_to_index(0), mdp.actions.index(1)] == 1
+    assert rl.Q[mdp.n, mdp.actions.index(0)] == 1
 
 
 @timeout
 def test_problem_4a_1():
-    mdp = a4.NumberLineMDP()
+    mdp = a4.NumberLineMDP(a4.NumberLineEnv())
     rl = a4.TabularQLearning(
         mdp.actions,
         mdp.discount,
         mdp.num_states,
-        mdp.state_to_index,
         epsilon=0.15,
     )
 
-    rl.step(a4.MDPTransition(0, 1, -5, 1, False))
-    rl.step(a4.MDPTransition(0, 1, -5, 1, False))
-    rl.step(a4.MDPTransition(0, 1, -5, -1, False))
-    rl.step(a4.MDPTransition(0, 2, -5, 1, False))
-    rl.step(a4.MDPTransition(0, 2, -5, -1, False))
-    rl.step(a4.MDPTransition(1, 1, 50, 2, True))
-    rl.step(a4.MDPTransition(1, 1, 50, 2, True))
-    rl.step(a4.MDPTransition(1, 1, -5, 0, False))
-    rl.step(a4.MDPTransition(1, 2, 50, 2, True))
-    rl.step(a4.MDPTransition(1, 2, -5, 0, False))
-    rl.step(a4.MDPTransition(-1, 1, -5, 0, False))
-    rl.step(a4.MDPTransition(-1, 1, 10, -2, True))
-    rl.step(a4.MDPTransition(-1, 2, -5, 0, False))
+    rl.step(a4.MDPTransition(2, 0, -5, 3, False))
+    rl.step(a4.MDPTransition(2, 0, -5, 3, False))
+    rl.step(a4.MDPTransition(2, 0, -5, 1, False))
+    rl.step(a4.MDPTransition(2, 1, -5, 3, False))
+    rl.step(a4.MDPTransition(2, 1, -5, 1, False))
+    rl.step(a4.MDPTransition(3, 0, 50, 4, True))
+    rl.step(a4.MDPTransition(3, 0, 50, 4, True))
+    rl.step(a4.MDPTransition(3, 0, -5, 2, False))
+    rl.step(a4.MDPTransition(3, 1, 50, 4, True))
+    rl.step(a4.MDPTransition(3, 1, -5, 2, False))
+    rl.step(a4.MDPTransition(1, 0, -5, 2, False))
+    rl.step(a4.MDPTransition(1, 0, 10, 0, True))
+    rl.step(a4.MDPTransition(1, 1, -5, 2, False))
 
-    pi = {-1: 1, 0: 2, 1: 1}
+    pi = {-1: 0, 0: 1, 1: 0}
     for state in range(-mdp.n + 1, mdp.n):
-        if pi[state] != rl.get_action(state, explore=False):
+        if pi[state] != rl.get_action(state + mdp.n, explore=False):
             raise AssertionError(f'Incorrect greedy action with the state {state}.')
 
 
 @timeout
 def test_problem_4a_2_hidden():
-    mdp = a4.NumberLineMDP()
+    env = a4.NumberLineEnv()
+    mdp = a4.NumberLineMDP(env)
     rl = a4.TabularQLearning(
         mdp.actions,
         mdp.discount,
         mdp.num_states,
-        mdp.state_to_index,
         epsilon=0.15,
     )
 
-    rl.step(a4.MDPTransition(0, 1, -5, 1, False))
-    rl.step(a4.MDPTransition(0, 1, -5, 1, False))
-    rl.step(a4.MDPTransition(0, 1, -5, -1, False))
-    rl.step(a4.MDPTransition(0, 2, -5, 1, False))
-    rl.step(a4.MDPTransition(0, 2, -5, -1, False))
-    rl.step(a4.MDPTransition(1, 1, 50, 2, True))
-    rl.step(a4.MDPTransition(1, 1, 50, 2, True))
-    rl.step(a4.MDPTransition(1, 1, -5, 0, False))
-    rl.step(a4.MDPTransition(1, 2, 50, 2, True))
-    rl.step(a4.MDPTransition(1, 2, -5, 0, False))
-    rl.step(a4.MDPTransition(-1, 1, -5, 0, False))
-    rl.step(a4.MDPTransition(-1, 1, 10, -2, True))
-    rl.step(a4.MDPTransition(-1, 2, -5, 0, False))
+    rl.step(a4.MDPTransition(2, 0, -5, 3, False))
+    rl.step(a4.MDPTransition(2, 0, -5, 3, False))
+    rl.step(a4.MDPTransition(2, 0, -5, 1, False))
+    rl.step(a4.MDPTransition(2, 1, -5, 3, False))
+    rl.step(a4.MDPTransition(2, 1, -5, 1, False))
+    rl.step(a4.MDPTransition(3, 0, 50, 4, True))
+    rl.step(a4.MDPTransition(3, 0, 50, 4, True))
+    rl.step(a4.MDPTransition(3, 0, -5, 2, False))
+    rl.step(a4.MDPTransition(3, 1, 50, 4, True))
+    rl.step(a4.MDPTransition(3, 1, -5, 2, False))
+    rl.step(a4.MDPTransition(1, 0, -5, 2, False))
+    rl.step(a4.MDPTransition(1, 0, 10, 0, True))
+    rl.step(a4.MDPTransition(1, 1, -5, 2, False))
 
 
 @timeout
@@ -142,7 +139,8 @@ def feature_extractor(state: tuple[float, float]) -> np.ndarray:
 
 @timeout
 def test_problem_4c_0():
-    mdp = a4.ContinuousGymMDP('MountainCar-v0', discount=0.999, time_limit=1000)
+    env = a4.CustomMountainCarEnv()
+    mdp = a4.ContinuousMountainCarMDP(env, discount=0.999, time_limit=1000)
     rl = a4.FunctionApproxQLearning(
         feature_dim=36,
         feature_extractor=feature_extractor,
@@ -164,7 +162,8 @@ def test_problem_4c_0():
 
 
 def test_problem_4c_1():
-    mdp = a4.ContinuousGymMDP('MountainCar-v0', discount=0.999, time_limit=1000)
+    env = a4.CustomMountainCarEnv()
+    mdp = a4.ContinuousMountainCarMDP(env, discount=0.999, time_limit=1000)
     rl = a4.FunctionApproxQLearning(
         feature_dim=36,
         feature_extractor=feature_extractor,
@@ -189,7 +188,8 @@ def test_problem_4c_1():
 
 
 def test_problem_4c_2():
-    mdp = a4.ContinuousGymMDP('MountainCar-v0', discount=0.999, time_limit=1000)
+    env = a4.CustomMountainCarEnv()
+    mdp = a4.ContinuousMountainCarMDP(env, discount=0.999, time_limit=1000)
     rl = a4.FunctionApproxQLearning(
         feature_dim=36,
         feature_extractor=feature_extractor,

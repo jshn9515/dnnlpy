@@ -5,6 +5,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.14.0-ee4c2c?logo=pytorch)](https://pytorch.org/)
 [![dnnlpy-ci](https://github.com/jshn9515/dnnlpy/actions/workflows/dnnlpy-ci.yml/badge.svg)](https://github.com/jshn9515/dnnlpy/actions/workflows/dnnlpy-ci.yml)
 [![dnnlpy-docs](https://github.com/jshn9515/dnnlpy/actions/workflows/build-docs.yml/badge.svg)](https://github.com/jshn9515/dnnlpy/actions/workflows/build-docs.yml)
+[![pre-commit.ci](https://results.pre-commit.ci/badge/github/jshn9515/dnnlpy/main.svg)](https://results.pre-commit.ci/latest/github/jshn9515/dnnlpy/main)
 [![Codecov](https://codecov.io/gh/jshn9515/dnnlpy/graph/badge.svg?branch=main)](https://codecov.io/gh/jshn9515/dnnlpy)
 [![Downloads](https://static.pepy.tech/badge/dnnlpy/month)](https://pepy.tech/project/dnnlpy)
 
