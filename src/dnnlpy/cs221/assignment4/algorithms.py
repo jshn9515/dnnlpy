@@ -196,6 +196,7 @@ class ValueIteration:
         that action in that state and following the current value function thereafter:
 
         .. math::
+
             Q(s,a) = \sum_{s'} P(s'\mid s,a)[R(s,a,s') + \gamma V(s')]
 
         The invalid actions are masked by setting their Q-values to negative infinity.
@@ -250,7 +251,7 @@ class ValueIteration:
 
 
 # Problem 3b: Model-Based Monte Carlo
-class ModelBasedMonteCarlo[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
+class ModelBasedMonteCarlo[ActionT](RLAlgorithm[int, ActionT]):
     """A model-based RL agent that learns an environment model from observed transitions.
 
     The agent maintains empirical estimates of transition dynamics and rewards. At
@@ -264,8 +265,6 @@ class ModelBasedMonteCarlo[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         actions (list[ActionT]): A list of possible actions.
         discount (float): Discount factor for future rewards, between 0 and 1.
         num_states (int): Total number of discrete states available.
-        state_to_index (Callable[[StateT], int]): Function mapping states to contiguous
-            indices ``[0, num_states)``.
         calc_val_iter_every (int, optional): Run value iteration every this many steps.
             Defaults to 10000.
         epsilon (float, optional): The epsilon value indicating how frequently the policy
@@ -278,7 +277,6 @@ class ModelBasedMonteCarlo[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         actions: list[ActionT],
         discount: float,
         num_states: int,
-        state_to_index: Callable[[StateT], int],
         calc_val_iter_every: int = 10000,
         epsilon: float = 0.2,
         seed: int | None = None,
@@ -287,7 +285,6 @@ class ModelBasedMonteCarlo[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         self.actions = list(dict.fromkeys(actions))
         self.discount = discount
         self.num_states = num_states
-        self.state_to_index = state_to_index
         self.calc_val_iter_every = calc_val_iter_every
         self.epsilon = epsilon
         self.rng = random.Random(seed)
@@ -306,7 +303,7 @@ class ModelBasedMonteCarlo[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         self.pi_indices = np.full(num_states, -1, dtype=np.int8)
 
     @override
-    def get_action(self, state: StateT, explore: bool = True) -> ActionT:
+    def get_action(self, state: int, explore: bool = True) -> ActionT:
         """Select an action for the given state using an epsilon-greedy policy.
 
         During training, the agent balances exploration and exploitation. With probability
@@ -321,7 +318,7 @@ class ModelBasedMonteCarlo[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         exploration schedule.
 
         Args:
-            state (StateT): The current environment state.
+            state (int): The current environment state index.
             explore (bool, optional): Whether to enable exploration during action selection.
                 Defaults to ``True``.
 
@@ -338,8 +335,7 @@ class ModelBasedMonteCarlo[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         else:  # >1e6
             epsilon = self.epsilon / math.log(self.num_iters - 1e6 + 1)  # decay
 
-        state_idx = self.state_to_index(state)
-        policy_idx = self.pi_indices[state_idx]
+        policy_idx = self.pi_indices[state]
 
         if policy_idx == -1 or (explore and self.rng.random() < epsilon):
             return self.rng.choice(self.actions)
@@ -347,7 +343,7 @@ class ModelBasedMonteCarlo[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         return self.actions[policy_idx]
 
     @override
-    def step(self, transition: MDPTransition[StateT, ActionT]) -> None:
+    def step(self, transition: MDPTransition[int, ActionT]) -> None:
         """Update the empirical environment model using an observed transition.
 
         Records the transition count and accumulated reward for each ``(state, action,
@@ -364,9 +360,9 @@ class ModelBasedMonteCarlo[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
             transition (MDPTransition): A tuple containing the current step's transition
                 information: state, action, reward, next_state, and terminal flag.
         """
-        s = self.state_to_index(transition.state)
+        s = transition.state
         a = self.actions.index(transition.action)
-        ns = self.state_to_index(transition.next_state)
+        ns = transition.next_state
 
         self.transition_counts[s, a, ns] += 1
         self.reward_sums[s, a, ns] += transition.reward
@@ -403,7 +399,7 @@ class ModelBasedMonteCarlo[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
 
 
 # Problem 4a: tabular Q-learning
-class TabularQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
+class TabularQLearning[ActionT](RLAlgorithm[int, ActionT]):
     """A model-free RL agent using tabular Q-learning.
 
     The agent maintains a Q-table that estimates the optimal action-value function for
@@ -418,8 +414,6 @@ class TabularQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         actions (list[ActionT]): A list of possible actions.
         discount (float): Discount factor for future rewards, between 0 and 1.
         num_states (int): Total number of discrete states available.
-        state_to_index (Callable[[StateT], int]): Function mapping states to contiguous
-            indices ``[0, num_states)``.
         epsilon (float, optional): The epsilon value indicating how frequently the agent
             selects a random action. Defaults to 0.2.
         initial_q (float, optional): Initial value of all Q-table entries. Defaults to 0.
@@ -431,7 +425,6 @@ class TabularQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         actions: list[ActionT],
         discount: float,
         num_states: int,
-        state_to_index: Callable[[StateT], int],
         epsilon: float = 0.2,
         initial_q: float = 0.0,
         seed: int | None = None,
@@ -440,17 +433,16 @@ class TabularQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         self.actions = list(dict.fromkeys(actions))
         self.discount = discount
         self.num_states = int(num_states)
-        self.state_to_index = state_to_index
         self.epsilon = epsilon
         self.rng = random.Random(seed)
 
         # self.Q[s, a] is the current estimate of Q* for state s and action a,
-        # where s = self.state_to_index(state) and a = self.actions.index(action).
+        # where s is a contiguous state index and a = self.actions.index(action).
         self.Q = np.full((self.num_states, len(self.actions)), float(initial_q))
         self.num_iters = 0
 
     @override
-    def get_action(self, state: StateT, explore: bool = True) -> ActionT:
+    def get_action(self, state: int, explore: bool = True) -> ActionT:
         """Select an action for the given state using an epsilon-greedy policy.
 
         During training, the agent balances exploration and exploitation. With probability
@@ -466,7 +458,7 @@ class TabularQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         a specified number of iterations.
 
         Args:
-            state (StateT): The current environment state.
+            state (int): The current environment state index.
             explore (bool, optional): Whether to enable exploration during action selection.
                 Defaults to ``True``.
 
@@ -483,11 +475,10 @@ class TabularQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         else:  # >1e5
             epsilon = self.epsilon / math.log(self.num_iters - 1e5 + 1)  # decay
 
-        state_idx = self.state_to_index(state)
         if explore and self.rng.random() < epsilon:
             return self.rng.choice(self.actions)
         else:
-            action_idx = int(np.argmax(self.Q[state_idx]))
+            action_idx = int(np.argmax(self.Q[state]))
             return self.actions[action_idx]
 
     @property
@@ -496,7 +487,7 @@ class TabularQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         return 0.1
 
     @override
-    def step(self, transition: MDPTransition[StateT, ActionT]) -> None:
+    def step(self, transition: MDPTransition[int, ActionT]) -> None:
         r"""Update the Q-table using an observed transition.
 
         Applies the one-step Q-learning update rule to the observed state-action pair:
@@ -520,9 +511,9 @@ class TabularQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
             transition (MDPTransition): An observed transition containing the current state,
                 action, reward, next state, and terminal indicator.
         """
-        s = self.state_to_index(transition.state)
+        s = transition.state
         a = self.actions.index(transition.action)
-        ns = self.state_to_index(transition.next_state)
+        ns = transition.next_state
 
         if transition.terminal:
             target = transition.reward
@@ -602,7 +593,7 @@ class FunctionApproxQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         return float(q_value)
 
     @override
-    def get_action(self, state: StateT, explore: bool = True) -> ActionT:
+    def get_action(self, state: StateT, explore: bool = True) -> ActionT | None:
         """Select an action for the given state using an epsilon-greedy policy.
 
         During training, the agent balances exploration and exploitation. With probability
@@ -619,7 +610,7 @@ class FunctionApproxQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
                 Defaults to ``True``.
 
         Returns:
-            ActionT: The action selected by the agent.
+            ActionT | None: The action selected by the agent.
         """
         if explore:
             self.num_iters += 1
