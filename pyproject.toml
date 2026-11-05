@@ -22,7 +22,7 @@ classifiers = [
 ]
 dependencies = [
     # PyTorch ecosystem
-    "torch[opt-einsum,pyyaml]>=2.14.0,<2.15.0",
+    "torch[opt-einsum,pyyaml]>=2.15.0,<2.16.0",
 
     # Scientific computing and visualization
     "matplotlib>=3.11.0,<3.12.0",
