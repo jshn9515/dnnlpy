@@ -27,10 +27,10 @@ uv sync --locked --all-extras
 
 This creates a `.venv` environment and installs `dnnlpy` in editable mode, along with its dependencies.
 
-The project supports Python 3.12-3.15, including free-threaded Python 3.14t and 3.15t. Python 3.14 is recommended for local development. Some optional dependencies, such as `pygame-ce`, may require additional system libraries when building from source. If you do not need all optional features, you can install only the dependencies required for testing:
+The project supports Python 3.12-3.15, including free-threaded Python 3.14t and 3.15t. Python 3.14 is recommended for local development. Some dependencies may need to be built from source on free-threaded Python due to the missing prebuilt wheels. These builds may require additional system libraries, such as `pygame-ce`. If you do not need all optional features, you can install only the dependencies required for testing and linting:
 
 ```bash
-uv sync --locked --extra test
+uv sync --locked --extra test --extra dev
 ```
 
 ## 2. Install pre-commit hooks
@@ -76,7 +76,17 @@ uv run ruff check . --fix
 
 Please follow the existing code style and avoid unrelated formatting changes.
 
-## 4. Run tests
+## 4. Type-check your code
+
+The project uses [ty](https://docs.astral.sh/ty/) for Python type checking. Run it from the repository root with:
+
+```bash
+uv run --extra dev ty check .
+```
+
+Resolve type errors in code you change before submitting a Pull Request.
+
+## 5. Run tests
 
 The project uses [pytest](https://docs.pytest.org/) for automated testing.
 
@@ -84,6 +94,7 @@ Run the test suite:
 
 ```bash
 uv run --extra test pytest tests/
+uv run pytest --doctest-modules src/  # for doctests
 ```
 
 If your changes introduce new functionality or fix a bug, please add or update the corresponding tests.
@@ -97,7 +108,7 @@ The GitHub Actions CI runs tests across the following Python versions:
 
 You do not need to test every Python version locally, but your changes should remain compatible with the supported versions.
 
-## 5. Build the documentation (optional)
+## 6. Build the documentation (optional)
 
 The documentation is built using [Sphinx](https://www.sphinx-doc.org/) with the Furo theme and Sphinx AutoAPI. If your changes affect documentation or public APIs, verify that the documentation builds successfully.
 
@@ -117,7 +128,7 @@ After building, open `_site/index.html` to review the generated documentation.
 
 The published documentation is available at [dnnlpy Documentation](https://jshn9515.github.io/dnnlpy/).
 
-## 6. Sign your commits
+## 7. Sign your commits
 
 This repository requires verified commits.
 
@@ -127,7 +138,7 @@ For setup instructions, refer to [GitHub&#39;s commit signature verification doc
 
 Your commits should display the **Verified** badge on GitHub.
 
-## 7. Submit a Pull Request
+## 8. Submit a Pull Request
 
 Once your changes are ready, open a Pull Request against the `main` branch.
 
@@ -136,7 +147,7 @@ Please ensure that:
 - Your Pull Request has a clear and descriptive title.
 - The description summarizes the changes and their motivation.
 - Relevant tests have been added or updated.
-- Formatting, linting, and tests pass.
+- Formatting, linting, type checking, and tests pass.
 - Documentation has been updated when necessary.
 - Your commits are verified.
 
