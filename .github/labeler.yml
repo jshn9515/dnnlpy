@@ -1,6 +1,6 @@
 ci:
   - changed-files:
-      - any-glob-to-any-file: ".github/**"
+      - any-glob-to-any-file: ".github/workflows/**"
 
 pre-commit:
   - changed-files:
@@ -9,8 +9,9 @@ pre-commit:
 dependencies:
   - changed-files:
       - any-glob-to-any-file:
-          - "requirements.txt"
+          - ".github/renovate.json"
           - "pyproject.toml"
+          - "uv.lock"
 
 cs221:
   - changed-files:
