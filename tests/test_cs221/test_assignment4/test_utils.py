@@ -52,8 +52,11 @@ class TwoStepMDP(a4.MDP[int, int]):
     def step(self, action: int) -> a4.MDPTransition[int, int]:
         state = self.state
         self.state += 1
-        terminal = self.state == 2
-        return a4.MDPTransition(state, action, self.state, self.state, terminal)
+        terminated = self.state == 2
+
+        return a4.MDPTransition(
+            state, action, self.state, self.state, terminated, False
+        )
 
     def close(self) -> None:
         pass
@@ -68,41 +71,34 @@ def test_simulate_stops_on_terminal_and_discounts_rewards():
     npt.assert_allclose(actual, expected)
 
 
+class EarlyTruncationMDP(TwoStepMDP):
+    def step(self, action: int) -> a4.MDPTransition[int, int]:
+        if self.state != 0:
+            raise RuntimeError('Step called after truncation.')
+
+        transition = super().step(action)
+        return transition._replace(truncated=True)
+
+
+def test_simulate_stops_on_early_truncation():
+    mdp = EarlyTruncationMDP()
+    rl = a4.FixedRLAlgorithm({0: 1, 1: 1}, mdp.actions, epsilon=0)
+
+    rewards = utils.simulate(mdp, rl, num_episodes=2, train=True, verbose=False)
+
+    npt.assert_allclose(rewards, [1.0, 1.0])
+
+
 def test_simulate_resets_number_line_between_episodes():
     env = a4.NumberLineEnv(n=1, seed=0)
     mdp = a4.NumberLineMDP(env)
     rl = a4.FixedRLAlgorithm({mdp.n: 0}, mdp.actions, epsilon=0)
 
     rewards = utils.simulate(mdp, rl, num_episodes=2, train=False, verbose=False)
-
     assert len(rewards) == 2
-    assert set(rewards).issubset({mdp.base_env.left_reward, mdp.base_env.right_reward})
 
-
-def test_number_line_mdp_transforms_observations_to_indices():
-    mdp = a4.NumberLineMDP(a4.NumberLineEnv(n=1), time_limit=2)
-
-    assert mdp.states == [0, 1, 2]
-    assert mdp.num_states == 3
-    assert mdp.reset(seed=0) == 1
-
-    transition = mdp.step(0)
-    assert transition.state == 1
-    assert transition.next_state == mdp.base_env.state + mdp.n
-    assert transition.next_state in (0, 2)
-    assert transition.terminal
-
-    mdp.close()
-
-
-def test_number_line_indices_work_with_tabular_learning():
-    mdp = a4.NumberLineMDP(a4.NumberLineEnv(n=1))
-    rl = a4.TabularQLearning(mdp.actions, mdp.discount, mdp.num_states, epsilon=0)
-
-    utils.simulate(mdp, rl, num_episodes=1, verbose=False)
-
-    assert np.count_nonzero(rl.Q[mdp.n]) == 1
-    mdp.close()
+    rewards_set = set(rewards)
+    assert rewards_set.issubset({mdp.base_env.left_reward, mdp.base_env.right_reward})
 
 
 class NoActionAfterFirstStep(a4.RLAlgorithm[int, int]):

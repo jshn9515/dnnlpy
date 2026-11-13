@@ -16,14 +16,17 @@ class MDPTransition[StateT, ActionT](NamedTuple):
         action (ActionT): The action taken in the state.
         reward (float): The reward received after taking the action.
         next_state (StateT): The state after taking the action.
-        terminal (bool): Whether the next state is terminal (i.e., the episode ended).
+        terminated (bool): Whether the next state is terminal (i.e., the episode ended).
+        truncated (bool): Whether the next state is truncated (i.e., the episode ended
+            due to time limit).
     """
 
     state: StateT
     action: ActionT
     reward: float
     next_state: StateT
-    terminal: bool
+    terminated: bool
+    truncated: bool
 
 
 class MDP[StateT, ActionT](ABC):
@@ -138,13 +141,14 @@ class NumberLineMDP(MDP[int, int]):
 
         Returns:
             MDPTransition: A transition object containing the previous state, action,
-            reward, next state, and terminal flag.
+            reward, next state, and termination/truncation flags.
         """
         state = self.base_env.state + self.n
         next_state, reward, terminated, truncated, _ = self.env.step(action)
-        terminal = terminated or truncated
 
-        transition = MDPTransition(state, action, float(reward), next_state, terminal)
+        transition = MDPTransition(
+            state, action, float(reward), next_state, terminated, truncated
+        )
         return transition
 
     @override
@@ -219,11 +223,12 @@ class ContinuousMountainCarMDP(MountainCarMDP[np.ndarray]):
     @override
     def step(self, action: int) -> MDPTransition[np.ndarray, int]:
         """Takes action in the current state and returns :class:`MDPTransition`."""
-        state = np.asarray(self.base_env.state, dtype=np.float32).copy()
+        state = np.asarray(self.base_env.state, dtype=np.float32, copy=True)
         next_state, reward, terminated, truncated, _ = self.env.step(action)
-        terminal = terminated or truncated
 
-        transition = MDPTransition(state, action, float(reward), next_state, terminal)
+        transition = MDPTransition(
+            state, action, float(reward), next_state, terminated, truncated
+        )
         return transition
 
 
@@ -245,7 +250,7 @@ class DiscreteMountainCarMDP(MountainCarMDP[int]):
         bins: int | tuple[int, ...] = 10,
         discount: float = 0.99,
         time_limit: int = 200,
-    ):
+    ) -> None:
         """Initialize the ``DiscreteGymMDP`` with the given parameters."""
         super().__init__(env, discount=discount, time_limit=time_limit)
         self.discretizer = wrappers.DiscretizeObservation(self.base_env, bins=bins)
@@ -292,7 +297,8 @@ class DiscreteMountainCarMDP(MountainCarMDP[int]):
         """Takes action in the current state and returns :class:`MDPTransition`."""
         state = int(self.discretizer.observation(self.base_env.state))
         next_state, reward, terminated, truncated, _ = self.env.step(action)
-        terminal = terminated or truncated
 
-        transition = MDPTransition(state, action, float(reward), next_state, terminal)
+        transition = MDPTransition(
+            state, action, float(reward), next_state, terminated, truncated
+        )
         return transition

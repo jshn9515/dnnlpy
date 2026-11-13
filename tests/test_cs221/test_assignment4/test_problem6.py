@@ -145,7 +145,8 @@ def make_step(
     action: int,
     reward: float,
     next_state: tuple[float, float],
-    terminal: bool = False,
+    terminated: bool = False,
+    truncated: bool = False,
 ) -> a4.MDPTransition:
     """Create an MDPTransition for the given parameters."""
     return a4.MDPTransition(
@@ -153,7 +154,8 @@ def make_step(
         action=action,
         reward=reward,
         next_state=np.array(next_state),
-        terminal=terminal,
+        terminated=terminated,
+        truncated=truncated,
     )
 
 
@@ -254,7 +256,7 @@ def test_problem_6c_6_hidden(tiny_features: FeatureExtractor):
     rng = np.random.default_rng(221)
     rollouts: list[list[a4.MDPTransition]] = []
 
-    for length, terminal in ((2, True), (4, False), (3, True), (4, False)):
+    for length, terminated in ((2, True), (4, False), (3, True), (4, False)):
         rollout: list[a4.MDPTransition] = []
 
         for t in range(length):
@@ -266,7 +268,8 @@ def test_problem_6c_6_hidden(tiny_features: FeatureExtractor):
                 action=int(rng.integers(3)),
                 reward=rng.uniform(-2, 1),
                 next_state=next_state,
-                terminal=terminal and t == length - 1,
+                terminated=terminated and t == length - 1,
+                truncated=not terminated and t == length - 1,
             )
             rollout.append(transition)
 
@@ -313,13 +316,13 @@ def check_bootstrapped(
     bootstrap_rewards: list[float],
     initial_theta: np.ndarray,
     expected: np.ndarray,
-    terminal: bool,
+    terminated: bool,
 ) -> None:
     """Check that ``BootstrappedPolicyGradient.update_policy()`` updates theta correctly for
     a 3-step rollout, either ending at a terminal state or at the time limit."""
     # A 3-step rollout: at the flag before the time limit (1000),
     # or at the time limit (3) without reaching the flag.
-    time_limit = 1000 if terminal else 3
+    time_limit = 1000 if terminated else 3
     rl = make_bootstrapped(feature_extractor, initial_theta, time_limit=time_limit)
     rl.rollout = [
         make_step(
@@ -327,7 +330,8 @@ def check_bootstrapped(
             bootstrap_actions[t],
             bootstrap_rewards[t],
             bootstrap_states[t + 1],
-            terminal and t == 2,
+            terminated=terminated and t == 2,
+            truncated=not terminated and t == 2,
         )
         for t in range(3)
     ]
@@ -365,7 +369,7 @@ def test_problem_6f_0(
         bootstrap_rewards,
         initial_theta,
         expected,
-        terminal=True,
+        terminated=True,
     )
 
 
@@ -394,5 +398,5 @@ def test_problem_6f_1(
         bootstrap_rewards,
         initial_theta,
         expected,
-        terminal=False,
+        terminated=False,
     )

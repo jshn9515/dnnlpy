@@ -142,8 +142,8 @@ class CustomMountainCarEnv(MountainCarEnv):
     and more. It also modifies the reward function to provide a shaped reward based on
     the car's position and velocity, rather than the original sparse reward structure.
 
-    For more details on the original MountainCar environment, refer to the
-    :class:`MountainCarEnv` documentation in the Gymnasium library.
+    For more details on the original MountainCar environment, refer to the MountainCarEnv
+    documentation in the Gymnasium library.
 
     Args:
         min_position (float, optional): Minimum position of the car. Defaults to -1.2.
@@ -240,7 +240,7 @@ class CustomMountainCarEnv(MountainCarEnv):
                 position and velocity.
 
         Returns:
-            float: Shaped reward for MountainCar environments, or the original reward for
+            float: Shaped reward for ``MountainCar`` environments, or the original reward for
             other environments.
         """
         position_reward = -(self.high[0] - state[0])

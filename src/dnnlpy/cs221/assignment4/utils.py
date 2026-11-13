@@ -11,6 +11,8 @@ if TYPE_CHECKING:
     from .algorithms import RLAlgorithm
     from .mdp import MDP
 
+type Array1D = np.ndarray[tuple[int]]
+
 __all__ = [
     'fourier_feature_extractor',
     'polynomial_feature_extractor',
@@ -21,10 +23,10 @@ logger = logging.getLogger(__name__)
 
 
 def polynomial_feature_extractor(
-    state: np.ndarray,
+    state: Array1D,
     degree: int = 3,
     scale: npt.ArrayLike | None = None,
-) -> np.ndarray:
+) -> Array1D:
     r"""Extracts polynomial features from the given state up to the specified degree.
 
     For a state with :math:`d` dimensions, this function computes all polynomial combinations
@@ -70,10 +72,10 @@ def polynomial_feature_extractor(
 
 # Problem 4b: Fourier feature extractor
 def fourier_feature_extractor(
-    state: np.ndarray,
+    state: Array1D,
     max_coeff: int = 5,
     scale: npt.ArrayLike | None = None,
-) -> np.ndarray:
+) -> Array1D:
     r"""Extracts Fourier features from the given state up to the specified maximum coefficient.
 
     For a state with :math:`d` dimensions, this function computes the Fourier features of
@@ -134,13 +136,13 @@ def simulate[StateT, ActionT](
     train: bool = True,
     verbose: bool = True,
     demo: bool = False,
-) -> np.ndarray:
+) -> Array1D:
     """Runs a simulation of the given MDP and RL algorithm for a specified number of trials.
 
     On each trial, the RL algorithm interacts with the MDP according to its dynamics, and
     the discounted reward is calculated for each trial. A trial ends when a terminal state
-    is reached, after the MDP's time limit is reached, or when the RL algorithm returns
-    ``None`` for an action (problem 5c).
+    is reached, a transition is truncated, the MDP's time limit is reached, or when the
+    RL algorithm returns ``None`` for an action (problem 5c).
 
     Args:
         mdp (MDP): The Markov Decision Process to simulate.
@@ -186,8 +188,8 @@ def simulate[StateT, ActionT](
             total_discount *= mdp.discount
             state = transition.next_state
 
-            if transition.terminal:
-                break  # We have reached a terminal state
+            if transition.terminated or transition.truncated:
+                break  # The episode has ended
 
         if verbose and episode % 100 == 0:
             n = len(str(num_episodes))
