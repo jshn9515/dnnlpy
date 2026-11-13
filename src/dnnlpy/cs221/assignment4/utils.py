@@ -139,8 +139,8 @@ def simulate[StateT, ActionT](
 
     On each trial, the RL algorithm interacts with the MDP according to its dynamics, and
     the discounted reward is calculated for each trial. A trial ends when a terminal state
-    is reached, after the MDP's time limit is reached, or when the RL algorithm returns
-    ``None`` for an action (problem 5c).
+    is reached, a transition is truncated, the MDP's time limit is reached, or when the
+    RL algorithm returns ``None`` for an action (problem 5c).
 
     Args:
         mdp (MDP): The Markov Decision Process to simulate.
@@ -186,8 +186,8 @@ def simulate[StateT, ActionT](
             total_discount *= mdp.discount
             state = transition.next_state
 
-            if transition.terminated:
-                break  # We have reached a terminal state
+            if transition.terminated or transition.truncated:
+                break  # The episode has ended
 
         if verbose and episode % 100 == 0:
             n = len(str(num_episodes))

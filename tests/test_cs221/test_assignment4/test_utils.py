@@ -71,6 +71,24 @@ def test_simulate_stops_on_terminal_and_discounts_rewards():
     npt.assert_allclose(actual, expected)
 
 
+class EarlyTruncationMDP(TwoStepMDP):
+    def step(self, action: int) -> a4.MDPTransition[int, int]:
+        if self.state != 0:
+            raise RuntimeError('Step called after truncation.')
+
+        transition = super().step(action)
+        return transition._replace(truncated=True)
+
+
+def test_simulate_stops_on_early_truncation():
+    mdp = EarlyTruncationMDP()
+    rl = a4.FixedRLAlgorithm({0: 1, 1: 1}, mdp.actions, epsilon=0)
+
+    rewards = utils.simulate(mdp, rl, num_episodes=2, train=True, verbose=False)
+
+    npt.assert_allclose(rewards, [1.0, 1.0])
+
+
 def test_simulate_resets_number_line_between_episodes():
     env = a4.NumberLineEnv(n=1, seed=0)
     mdp = a4.NumberLineMDP(env)
