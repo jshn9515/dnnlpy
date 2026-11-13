@@ -186,7 +186,7 @@ def simulate[StateT, ActionT](
             total_discount *= mdp.discount
             state = transition.next_state
 
-            if transition.terminal:
+            if transition.terminated:
                 break  # We have reached a terminal state
 
         if verbose and episode % 100 == 0:

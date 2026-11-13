@@ -2,19 +2,23 @@ import math
 import random
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import override
+from typing import Any, override
 
 import numpy as np
 
 from .mdp import MDPTransition
 
-type Axis = int | tuple[int, ...] | None
+type Axis = int | tuple[int, ...]
+type Array1D = np.ndarray[tuple[int]]
+type Array2D = np.ndarray[tuple[int, int]]
+type Array3D = np.ndarray[tuple[int, int, int]]
 
 __all__ = [
     'BootstrappedPolicyGradient',
     'ConstrainedQLearning',
     'FixedRLAlgorithm',
     'FunctionApproxQLearning',
+    'LinearValueFunction',
     'ModelBasedMonteCarlo',
     'PolicyGradient',
     'RLAlgorithm',
@@ -24,7 +28,7 @@ __all__ = [
 ]
 
 
-def softmax(x: np.ndarray, axis: Axis = None) -> np.ndarray:
+def softmax(x: np.ndarray, axis: Axis | None = None) -> np.ndarray:
     """Compute the softmax of the input array along the specified axis."""
     x_max = np.max(x, axis=axis, keepdims=True)
     exp_x_shifted = np.exp(x - x_max)
@@ -35,9 +39,9 @@ class RLAlgorithm[StateT, ActionT](ABC):
     """An abstract base class for reinforcement learning algorithms.
 
     Defines the interface for selecting actions and learning from environment feedback.
-    The simulator (see :func:`simulate()`) will call :meth:`get_action()` to get an action,
-    perform the action, and then provide feedback (via :meth:`step()`) to the RL algorithm,
-    so it can adjust its parameters.
+    The simulator will call :meth:`get_action()` to get an action, perform the action,
+    and then provide feedback (via :meth:`step()`) to the RL algorithm, so it can adjust
+    its parameters.
     """
 
     @abstractmethod
@@ -60,7 +64,8 @@ class RLAlgorithm[StateT, ActionT](ABC):
 
         Args:
             transition (MDPTransition): A tuple containing the current step's transition
-                information: state, action, reward, next_state, and terminal flag.
+                information: state, action, reward, next_state, and termination/truncation
+                flags.
         """
 
 
@@ -90,9 +95,9 @@ class FixedRLAlgorithm[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
 
     @override
     def get_action(self, state: StateT, explore: bool = True) -> ActionT:
-        r"""Returns the action for the given state according to the fixed policy :math:`\pi`.
+        r"""Return the action for the given state according to the fixed policy :math:`\pi`.
         If :attr:`explore` is ``True``, it may return a random action with probability
-        :attr:`epsilon`.
+        :math:`\epsilon`.
 
         Args:
             state (StateT): The current state of the MDP.
@@ -148,9 +153,38 @@ class RandomRLAlgorithm[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         """
 
 
-# Problem 3a: Value Iteration on Number Line (from Problem 1)
+# Problem 3a: Value Iteration on NumberLine (from Problem 1)
 class ValueIteration:
     r"""A RL algorithm that computes the optimal policy using value iteration.
+
+    Value iteration is a **model-based** dynamic programming algorithm that iteratively
+    updates the state-value function using the Bellman optimality equation:
+
+    .. math::
+
+        V_{k+1}(s) = \max_{a \in \mathcal{A}(s)}
+        \sum_{s'} P(s' \mid s, a)
+        \left[R(s, a, s') + \gamma V_k(s')\right]
+
+    where :math:`P(s' \mid s, a)` is the transition probability, :math:`R(s, a, s')` is the
+    reward associated with the transition, :math:`\gamma` is the discount factor, and
+    :math:`\mathcal{A}(s)` is the set of valid actions in state :math:`s`.
+
+    The iteration continues until the maximum change in state values falls below the convergence
+    threshold :math:`\epsilon`:
+
+    .. math::
+
+        \max_s |V_{k+1}(s) - V_k(s)| < \epsilon
+
+    After convergence, the optimal policy is obtained by selecting the action that maximizes
+    the expected return:
+
+    .. math::
+
+        \pi^*(s) = \arg\max_{a \in \mathcal{A}(s)}
+        \sum_{s'} P(s' \mid s, a)
+        \left[R(s, a, s') + \gamma V^*(s')\right]
 
     Args:
         transitions (np.ndarray): Transition probabilities with shape ``(num_states,
@@ -158,38 +192,39 @@ class ValueIteration:
         rewards (np.ndarray): Rewards with shape ``(num_states, num_actions, num_states)``.
         discount (float): Discount factor :math:`\gamma` for future rewards.
         epsilon (float, optional): Convergence threshold for value iteration. Defaults to 0.001.
-        valid_actions (np.ndarray, optional): Boolean mask indicating valid actions for each
+        action_mask (np.ndarray, optional): Boolean mask indicating valid actions for each
             state with shape ``(num_states, num_actions)``. Defaults to ``None``.
     """
 
     def __init__(
         self,
-        transitions: np.ndarray,
-        rewards: np.ndarray,
+        transitions: Array3D,
+        rewards: Array3D,
         discount: float,
         epsilon: float = 0.001,
-        valid_actions: np.ndarray | None = None,
-    ):
+        action_mask: Array2D | None = None,
+    ) -> None:
         """Initialize the value iteration algorithm with the specified parameters."""
         self.transitions = transitions
         self.rewards = rewards
         self.discount = discount
         self.epsilon = epsilon
-        self.valid_actions = valid_actions
 
         self.num_states = transitions.shape[0]
         self.num_actions = transitions.shape[1]
+        self.values = np.zeros(self.num_states)
 
-        if valid_actions is None:
-            action_mask = np.ones((self.num_states, self.num_actions), dtype=np.bool_)
+        if action_mask is None:
+            action_mask = np.ones((self.num_states, self.num_actions), dtype=np.bool)
         else:
-            action_mask = np.asarray(valid_actions, dtype=np.bool_)
+            action_mask = np.asarray(action_mask, dtype=np.bool)
 
         self.action_mask = action_mask
-        self.values = np.zeros(self.num_states)
+        # Whether each state has at least one valid action. States without valid actions
+        # will have value zero and receive policy index -1.
         self.has_valid_actions = np.any(action_mask, axis=1)
 
-    def compute_q_values(self) -> np.ndarray:
+    def get_q(self) -> Array2D:
         r"""Compute Q-values for all state-action pairs using the current value function.
 
         The Q-value for a state-action pair is defined as the expected return of taking
@@ -212,12 +247,12 @@ class ValueIteration:
         q_values = np.where(self.action_mask, q_values, -np.inf)
         return q_values
 
-    def compute_policy(self) -> np.ndarray:
+    def compute_policy(self) -> Array1D:
         r"""Compute the optimal policy using value iteration.
 
         Iteratively updates the value function using the Bellman optimality equation until
-        the maximum change in state values is below :attr:`self.epsilon`. The policy is
-        then extracted by selecting the action with the highest Q-value in each state.
+        the maximum change in state values is below :math:`\epsilon`. The policy is then
+        extracted by selecting the action with the highest Q-value in each state.
 
         The optimal value function and policy are defined as:
 
@@ -234,7 +269,7 @@ class ValueIteration:
             np.ndarray: Optimal action indices for each state with shape ``(num_states,)``.
         """
         while True:
-            q_values = self.compute_q_values()
+            q_values = self.get_q()
             new_values = np.max(q_values, axis=1)
             new_values = np.where(self.has_valid_actions, new_values, 0.0)
 
@@ -244,7 +279,7 @@ class ValueIteration:
             if delta < self.epsilon:
                 break
 
-        q_values = self.compute_q_values()
+        q_values = self.get_q()
         new_policy = np.argmax(q_values, axis=1)
         new_policy = np.where(self.has_valid_actions, new_policy, -1)
         return new_policy
@@ -252,14 +287,42 @@ class ValueIteration:
 
 # Problem 3b: Model-Based Monte Carlo
 class ModelBasedMonteCarlo[ActionT](RLAlgorithm[int, ActionT]):
-    """A model-based RL agent that learns an environment model from observed transitions.
+    r"""A model-based RL agent that learns an empirical environment model.
 
-    The agent maintains empirical estimates of transition dynamics and rewards. At
-    configurable intervals, value iteration is applied to the estimated model to improve
-    its policy.
+    This agent is **model-based** because it explicitly estimates the environment's
+    transition probabilities and expected rewards from observed transitions. The estimated
+    model is then used for planning via value iteration, rather than directly learning a
+    policy or value function from sampled rewards.
 
-    The agent uses an epsilon-greedy strategy for action selection, balancing exploration
-    and exploitation during training.
+    Given observed transitions :math:`(s, a, r, s')`, the transition model is estimated
+    using empirical frequencies:
+
+    .. math::
+
+        \hat{P}(s' \mid s, a) = \frac{N(s, a, s')}{\sum_{x} N(s, a, x)}
+
+    where :math:`N(s, a, s')` is the number of observed transitions from state :math:`s` to
+    :math:`s'` after taking action :math:`a`.
+
+    The expected reward for each observed transition is estimated as:
+
+    .. math::
+
+        \hat{R}(s, a, s') = \frac{\sum_{i=1}^{N(s,a,s')} r_i}{N(s, a, s')}
+
+    where :math:`r_i` is the reward observed on the :math:`i`-th occurrence of the transition
+    :math:`(s, a, s')`.
+
+    Unobserved transitions and state-action pairs are assigned zero estimates. Only observed
+    state-action pairs are considered valid during planning.
+
+    At :attr:`calc_val_iter_every` intervals, value iteration is applied to the estimated
+    environment model :math:`(\hat{P}, \hat{R})` to compute an improved policy.
+
+    During training, an epsilon-greedy strategy balances exploration and exploitation. The
+    exploration probability follows a predefined schedule: initially performing random
+    exploration, then using the configured :math:`\epsilon`, and eventually decaying the
+    exploration probability logarithmically.
 
     Args:
         actions (list[ActionT]): A list of possible actions.
@@ -304,10 +367,10 @@ class ModelBasedMonteCarlo[ActionT](RLAlgorithm[int, ActionT]):
 
     @override
     def get_action(self, state: int, explore: bool = True) -> ActionT:
-        """Select an action for the given state using an epsilon-greedy policy.
+        r"""Select an action for the given state using an epsilon-greedy policy.
 
         During training, the agent balances exploration and exploitation. With probability
-        :attr:`self.epsilon`, a random action is selected; otherwise, the action specified
+        :math:`\epsilon`, a random action is selected; otherwise, the action specified
         by the current policy is chosen.
 
         During evaluation, the agent follows the current policy without exploration. If
@@ -346,19 +409,18 @@ class ModelBasedMonteCarlo[ActionT](RLAlgorithm[int, ActionT]):
     def step(self, transition: MDPTransition[int, ActionT]) -> None:
         """Update the empirical environment model using an observed transition.
 
-        Records the transition count and accumulated reward for each ``(state, action,
-        next_state)`` tuple.
-
-        Periodically estimates transition probabilities and expected rewards from the
-        collected observations, then runs value iteration on the estimated model to
-        update the policy.
+        This function records the transition count and accumulated reward for each
+        ``(state, action, next_state)`` tuple. At :attr:`calc_val_iter_every` intervals,
+        it estimates the transition probabilities and expected rewards from the collected
+        observations, then runs value iteration on the estimated model to update the policy.
 
         The resulting policy is stored as action indices in ``self.pi_indices``, with
         ``-1`` indicating states without a valid action.
 
         Args:
             transition (MDPTransition): A tuple containing the current step's transition
-                information: state, action, reward, next_state, and terminal flag.
+                information: state, action, reward, next_state, and termination/truncation
+                flags.
         """
         s = transition.state
         a = self.actions.index(transition.action)
@@ -393,22 +455,30 @@ class ModelBasedMonteCarlo[ActionT](RLAlgorithm[int, ActionT]):
                 transitions=transition_probs,
                 rewards=average_rewards,
                 discount=self.discount,
-                valid_actions=self.valid_actions,
+                action_mask=self.valid_actions,
             )
             self.pi_indices = vi.compute_policy()
 
 
 # Problem 4a: tabular Q-learning
 class TabularQLearning[ActionT](RLAlgorithm[int, ActionT]):
-    """A model-free RL agent using tabular Q-learning.
+    r"""A model-free RL agent using tabular Q-learning.
 
-    The agent maintains a Q-table that estimates the optimal action-value function for
-    each state-action pair. Q-values are updated incrementally using observed transitions
-    and the Bellman optimality equation.
+    This is a **model-free** method. The agent maintains a Q-table that estimates the
+    optimal action-value function :math:`Q^*(s, a)` for each state-action pair. Q-values
+    are updated incrementally using observed transitions and the Bellman optimality equation:
+
+    .. math::
+
+        Q(s, a) \leftarrow Q(s, a) + \alpha
+        [r + \gamma \max_{a'} Q(s', a') - Q(s, a)]
+
+    where :math:`\alpha` is the learning rate and :math:`\gamma` is the discount factor.
+    For terminal states, the bootstrap term is omitted.
 
     The agent uses an epsilon-greedy strategy for action selection, balancing exploration
-    and exploitation during training. The exploration probability is adjusted dynamically
-    according to a predefined schedule.
+    and exploitation during training. Both the exploration probability :math:`\epsilon` and
+    learning rate :math:`\alpha` follow predefined decay schedules.
 
     Args:
         actions (list[ActionT]): A list of possible actions.
@@ -432,7 +502,7 @@ class TabularQLearning[ActionT](RLAlgorithm[int, ActionT]):
         """Initialize the ``TabularQLearning`` agent with the specified parameters."""
         self.actions = list(dict.fromkeys(actions))
         self.discount = discount
-        self.num_states = int(num_states)
+        self.num_states = num_states
         self.epsilon = epsilon
         self.rng = random.Random(seed)
 
@@ -443,10 +513,10 @@ class TabularQLearning[ActionT](RLAlgorithm[int, ActionT]):
 
     @override
     def get_action(self, state: int, explore: bool = True) -> ActionT:
-        """Select an action for the given state using an epsilon-greedy policy.
+        r"""Select an action for the given state using an epsilon-greedy policy.
 
         During training, the agent balances exploration and exploitation. With probability
-        :attr:`self.epsilon`, a random action is selected; otherwise, the action with the
+        :math:`\epsilon`, a random action is selected; otherwise, the action with the
         highest estimated Q-value is chosen.
 
         During evaluation, the agent selects the action with the highest estimated Q-value
@@ -500,22 +570,19 @@ class TabularQLearning[ActionT](RLAlgorithm[int, ActionT]):
         where :math:`\alpha` is the learning rate, :math:`\gamma` is the discount factor,
         and :math:`r` is the observed immediate reward.
 
-        For terminal transitions, the future reward term is omitted, so  the update target
+        For terminal transitions, the future reward term is omitted, so the update target
         is simply the observed reward.
 
-        Unlike model-based methods, Q-learning updates its Q-values directly from sampled
-        transitions without estimating transition probabilities or maintaining an explicit
-        environment model.
-
         Args:
-            transition (MDPTransition): An observed transition containing the current state,
-                action, reward, next state, and terminal indicator.
+            transition (MDPTransition): A tuple containing the current step's transition
+                information: state, action, reward, next_state, and termination/truncation
+                flags.
         """
         s = transition.state
         a = self.actions.index(transition.action)
         ns = transition.next_state
 
-        if transition.terminal:
+        if transition.terminated:
             target = transition.reward
         else:
             target = transition.reward + self.discount * np.max(self.Q[ns])
@@ -527,13 +594,30 @@ class TabularQLearning[ActionT](RLAlgorithm[int, ActionT]):
 class FunctionApproxQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
     r"""A model-free RL agent using linear function approximation.
 
-    The agent approximates the optimal action-value function using a linear combination
-    of state features and action-specific weights, rather than maintaining an explicit
-    Q-table.
+    The agent approximates the optimal action-value function using a linear combination of
+    state features and action-specific weights, rather than maintaining an explicit Q-table:
+
+    .. math::
+
+        Q(s, a; \mathbf{w}) = \mathbf{w}_a^\top \phi(s)
+
+    where :math:`\phi(s)` is the feature vector of state :math:`s`, and :math:`\mathbf{w}_a`
+    is the weight vector associated with action :math:`a`.
+
+    The weights are updated using the Q-learning temporal-difference error:
+
+    .. math::
+
+        \begin{gathered}
+            \delta = r + \gamma \max_{a'} Q(s', a'; \mathbf{w}) - Q(s, a; \mathbf{w}) \\
+            \mathbf{w}_a \leftarrow \mathbf{w}_a + \alpha \delta \phi(s)
+        \end{gathered}
+
+    For terminal states, the future action-value term is zero.
 
     The agent uses an epsilon-greedy strategy for action selection, balancing exploration
-    and exploitation during training. Both the exploration probability and learning rate
-    follow predefined decay schedules.
+    and exploitation during training. Both the exploration probability :math:`\epsilon` and
+    learning rate :math:`\alpha` follow predefined decay schedules.
 
     Args:
         feature_dim (int): Dimensionality of the state feature vectors.
@@ -548,12 +632,12 @@ class FunctionApproxQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
     def __init__(
         self,
         feature_dim: int,
-        feature_extractor: Callable[[StateT], np.ndarray],
+        feature_extractor: Callable[[StateT], Array1D],
         actions: list[ActionT],
         discount: float,
         epsilon: float = 0.2,
         seed: int | None = None,
-    ):
+    ) -> None:
         """Initialize the ``FunctionApproxQLearning`` agent with the specified parameters."""
         self.feature_dim = feature_dim
         self.feature_extractor = feature_extractor
@@ -568,7 +652,7 @@ class FunctionApproxQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         self.weight = self.rng.standard_normal((feature_dim, len(actions)))
         self.num_iters = 0
 
-    def get_q(self, state: StateT, action: ActionT) -> float:
+    def get_single_q(self, state: StateT, action: ActionT) -> float:
         r"""Estimate the Q-value for a state-action pair.
 
         Computes the action value using linear function approximation:
@@ -592,14 +676,38 @@ class FunctionApproxQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         q_value = np.dot(phi, self.weight[:, idx])
         return float(q_value)
 
+    def get_vector_q(self, state: StateT) -> Array1D:
+        r"""Estimate the Q-values for all actions in a given state.
+
+        Computes the action values for all actions using linear function approximation:
+
+        .. math::
+
+            Q(s, a; \mathbf{w}) = \phi(s)^\top \mathbf{w}_a
+
+        where :math:`\phi(s)` is the state feature vector and :math:`\mathbf{w}_a` is the
+        weight vector for action :math:`a`.
+
+        Args:
+            state (StateT): The current environment state.
+
+        Returns:
+            np.ndarray: An array of estimated Q-values for each action.
+        """
+        phi = self.feature_extractor(state)
+        q_values = phi @ self.weight
+        return q_values
+
     @override
     def get_action(self, state: StateT, explore: bool = True) -> ActionT | None:
-        """Select an action for the given state using an epsilon-greedy policy.
+        r"""Select an action for the given state using an epsilon-greedy policy.
 
         During training, the agent balances exploration and exploitation. With probability
-        ``epsilon``, a random action is selected; otherwise, the action with the highest
-        estimated Q-value is chosen. During evaluation, the agent always selects the action
-        with the highest estimated Q-value without exploration.
+        :math:`\epsilon`, a random action is selected; otherwise, the action with the
+        highest estimated Q-value is chosen.
+
+        During evaluation, the agent always selects the action with the highest estimated
+        Q-value without exploration.
 
         The exploration probability follows a predefined schedule, with full exploration
         during the initial steps, followed by a constant probability and logarithmic decay.
@@ -626,7 +734,7 @@ class FunctionApproxQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
             actions = np.array(self.actions)
             return self.rng.choice(actions)
         else:
-            q_values = np.array([self.get_q(state, action) for action in self.actions])
+            q_values = self.get_vector_q(state)
             return self.actions[np.argmax(q_values)]
 
     @property
@@ -651,38 +759,66 @@ class FunctionApproxQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         For terminal transitions, the future reward term is omitted, and the update target
         is simply the observed reward.
 
-        Unlike tabular Q-learning, the agent updates action-specific weights instead of
-        individual Q-table entries, allowing learned values to generalize across states with
-        similar features.
-
         Args:
-            transition (MDPTransition): An observed transition containing the current state,
-                action, reward, next state, and terminal indicator.
+            transition (MDPTransition): A tuple containing the current step's transition
+                information: state, action, reward, next_state, and termination/truncation
+                flags.
         """
         T = transition
-        idx = self.actions.index(T.action)
-        features = self.feature_extractor(T.state)
+        a = self.actions.index(T.action)
+        phi = self.feature_extractor(T.state)
+        old_values = self.get_vector_q(T.state)
 
-        old_value = self.get_q(T.state, T.action)
-        if transition.terminal:
-            new_value = T.reward
+        if transition.terminated:
+            new_values = T.reward
         else:
-            new_value = T.reward + self.discount * max(
-                self.get_q(T.next_state, action) for action in self.actions
-            )
+            q_values = self.get_vector_q(T.next_state)
+            new_values = T.reward + self.discount * np.max(q_values)
 
-        self.weight[:, idx] += self.step_size * (new_value - old_value) * features
+        self.weight[:, a] += self.step_size * (new_values - old_values[a]) * phi
 
 
 class ConstrainedQLearning(FunctionApproxQLearning[np.ndarray, int]):
-    r"""A Q-learning agent with action constraints based on MountainCar dynamics.
+    r"""A constrained Q-learning agent for the MountainCar environment.
 
-    Extends linear function approximation Q-learning by restricting actions according
-    to the predicted next velocity of the car.
+    Extends linear function approximation Q-learning by restricting the available actions
+    according to the car's predicted next velocity. The Q-function is approximated by a
+    linear combination of features:
 
-    The agent uses an epsilon-greedy strategy for action selection, considering only
-    actions that satisfy the velocity constraint. If no valid action is available, the
-    agent returns ``None``.
+    .. math::
+
+        \hat{Q}(s, a; \mathbf{w}) = \mathbf{w}^{\top}\phi(s, a)
+
+    where :math:`\phi(s, a)` is the state-action feature vector and :math:`\mathbf{w}` is the
+    learnable weight vector.
+
+    Given the current state :math:`s_t = (p_t, v_t)` and action :math:`a_t \in \{0, 1, 2\}`,
+    the next velocity is predicted using the MountainCar dynamics:
+
+    .. math::
+
+        \hat{v}_{t+1}(s_t, a_t)
+        = v_t + (a_t - 1)F - G\cos(3p_t)
+
+    where :math:`F` and :math:`G` are the engine force and gravity coefficients, respectively.
+
+    The set of valid actions is defined as:
+
+    .. math::
+
+        \mathcal{A}_{\mathrm{valid}}(s)
+        = \left\{
+            a \in \mathcal{A}
+            \;\middle|\;
+            |\hat{v}_{t+1}(s,a)| < v_{\max}
+          \right\}
+
+    If no maximum speed is specified, all actions are considered valid. If the valid action
+    set is empty, the agent returns ``None``.
+
+    The agent uses an epsilon-greedy strategy for action selection, balancing exploration
+    and exploitation during training. Both the exploration probability :math:`\epsilon` and
+    learning rate :math:`\alpha` follow predefined decay schedules.
 
     Args:
         feature_dim (int): Dimensionality of the state feature vectors.
@@ -703,7 +839,7 @@ class ConstrainedQLearning(FunctionApproxQLearning[np.ndarray, int]):
     def __init__(
         self,
         feature_dim: int,
-        feature_extractor: Callable[[np.ndarray], np.ndarray],
+        feature_extractor: Callable[[Array1D], Array1D],
         actions: list[int],
         discount: float,
         epsilon: float = 0.2,
@@ -726,12 +862,8 @@ class ConstrainedQLearning(FunctionApproxQLearning[np.ndarray, int]):
         self.max_speed = max_speed
 
     @override
-    def get_action(self, state: np.ndarray, explore: bool = True) -> int | None:
+    def get_action(self, state: Array1D, explore: bool = True) -> int | None:
         r"""Select an action using an epsilon-greedy policy with velocity constraints.
-
-        The state contains the car's position and velocity, while actions ``0``, ``1``,
-        and ``2`` correspond to accelerating left, coasting, and accelerating right,
-        respectively.
 
         For each action, the next velocity is predicted using the MountainCar dynamics:
 
@@ -742,15 +874,13 @@ class ConstrainedQLearning(FunctionApproxQLearning[np.ndarray, int]):
         where :math:`p_t` and :math:`v_t` are the current position and velocity, and
         :math:`F` and :math:`G` are the force and gravity coefficients.
 
-        An action is valid if :math:`|v_{t+1}| < v_{\max}`. When no speed limit is specified,
-        all actions are considered valid.
+        An action is valid if :math:`|v_{t+1}| < v_{\max}`. Otherwise, it is excluded from
+        consideration. If no valid action exists, the agent returns ``None``. When no speed
+        limit is specified, all actions are considered valid.
 
-        During training, the agent selects a random valid action with probability ``epsilon``;
-        otherwise, it selects the valid action with the highest estimated Q-value. During
-        evaluation, exploration is disabled.
-
-        The exploration probability follows a predefined schedule, with full exploration
-        during the initial steps and logarithmic decay after a specified number of iterations.
+        During training, the agent selects a random valid action with probability
+        :math:`\epsilon`; otherwise, it selects the valid action with the highest estimated
+        Q-value. During evaluation, exploration is disabled.
 
         Args:
             state (np.ndarray): Current state containing position and velocity, with shape
@@ -790,11 +920,13 @@ class ConstrainedQLearning(FunctionApproxQLearning[np.ndarray, int]):
         if explore and self.rng.random() < epsilon:
             return int(self.rng.choice(valid_actions))
         else:
-            return max(valid_actions, key=lambda action: self.get_q(state, action))
+            return max(
+                valid_actions, key=lambda action: self.get_single_q(state, action)
+            )
 
 
 class LinearValueFunction[StateT]:
-    r"""A linear state-value function approximator used by :class:`BootstrappedPolicyGradient`.
+    r"""A linear state-value function approximator using semi-gradient TD(0).
 
     The estimated state value is defined as:
 
@@ -805,22 +937,23 @@ class LinearValueFunction[StateT]:
     where :math:`\mathbf{w}` is the weight vector and :math:`\phi(s)` is the feature
     representation of state :math:`s`.
 
-    The weights are updated using semi-gradient TD(0), following the same update rule as
-    :class:`FunctionApproxQLearning` in Problem 4c, with :math:`\hat{V}` replacing
-    :math:`\hat{Q}`:
+    The TD target and TD error are defined as:
+
+    .. math::
+
+        \begin{aligned}
+            y &= r + \gamma\hat{V}(s') \\
+            \delta &= y - \hat{V}(s)
+        \end{aligned}
+
+    The weights are updated according to the semi-gradient TD(0) update rule:
 
     .. math::
 
         \mathbf{w} \leftarrow \mathbf{w} +
         \alpha \left(r + \gamma\hat{V}(s') - \hat{V}(s)\right)\phi(s)
 
-    where:
-
-    - :math:`\alpha` is the learning rate (``step_size``).
-    - :math:`r` is the immediate reward.
-    - :math:`\gamma` is the discount factor.
-    - :math:`s'` is the next state.
-    - :math:`\hat{V}(s') = 0` if the next state is terminal.
+    where :math:`\alpha` is the learning rate, and :math:`\gamma` is the discount factor.
 
     Args:
         feature_dim (int): The dimensionality of the feature representation.
@@ -833,16 +966,27 @@ class LinearValueFunction[StateT]:
     def __init__(
         self,
         feature_dim: int,
-        feature_extractor: Callable[[StateT], np.ndarray],
+        feature_extractor: Callable[[StateT], Array1D],
         step_size: float = 0.01,
+        discount: float = 0.9,
     ) -> None:
         """Initialize the state-value function approximator."""
         self.feature_extractor = feature_extractor
         self.step_size = step_size
+        self.discount = discount
         self.weight = np.zeros(feature_dim)
 
     def get_v(self, state: StateT) -> float:
-        """Returns the estimated value of the given state using the linear approximation.
+        r"""Returns the estimated value of the given state using the linear approximation.
+
+        The estimated state value is defined as:
+
+        .. math::
+
+            \hat{V}(s) = \mathbf{w}^{\top}\phi(s)
+
+        where :math:`\mathbf{w}` is the weight vector and :math:`\phi(s)` is the feature
+        representation of state :math:`s`.
 
         Args:
             state (StateT): The state for which to estimate the value.
@@ -850,59 +994,136 @@ class LinearValueFunction[StateT]:
         Returns:
             float: The estimated value of the state.
         """
-        value = np.dot(self.weight, self.feature_extractor(state))
-        return float(value)
+        V = np.dot(self.weight, self.feature_extractor(state))
+        return float(V)
 
-    def update(
-        self,
-        state: StateT,
-        reward: float,
-        next_state: StateT,
-        discount: float,
-        terminal: bool,
-    ) -> None:
+    def update(self, transition: MDPTransition[StateT, Any]) -> None:
         r"""Updates the weights of the linear state-value function approximator using
         semi-gradient TD(0).
 
+        The update rule is defined as:
+
+        .. math::
+
+            \mathbf{w} \leftarrow \mathbf{w} +
+            \alpha \left(r + \gamma\hat{V}(s') - \hat{V}(s)\right)\phi(s)
+
+        where :math:`\alpha` is the learning rate, and :math:`\gamma` is the discount factor.
+
         Args:
-            state (StateT): The current state.
-            reward (float): The immediate reward received after taking an action in the
-                current state.
-            next_state (StateT): The next state after taking an action in the current state.
-            discount (float): The discount factor :math:`\gamma`.
-            terminal (bool): A boolean indicating whether the next state is terminal.
+            transition (MDPTransition): A tuple containing the current step's transition information:
+                state, action, reward, next_state, and termination/truncation flags.
         """
-        V_hat = 0.0 if terminal else self.get_v(next_state)
+        T = transition
+        V_hat = 0.0 if T.terminated else self.get_v(T.next_state)
 
-        features = self.feature_extractor(state)
-        target = reward + discount * V_hat
-        delta = target - np.dot(self.weight, features)
+        target = T.reward + self.discount * V_hat
+        delta = target - self.get_v(T.state)
 
-        self.weight += self.step_size * delta * features
+        phi = self.feature_extractor(T.state)
+        self.weight += self.step_size * delta * phi
 
 
 # Problem 6c: Policy Gradient (REINFORCE)
 class PolicyGradient[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
-    r"""A RL agent that uses the REINFORCE policy gradient algorithm to learn a policy.
+    r"""A RL agent that uses the REINFORCE algorithm to learn a policy.
 
-    The agent uses a softmax policy parameterized by a weight matrix :attr:`self.theta`
-    with shape ``(feature_dim, num_actions)``. Each column corresponds to the weights
-    of one action.
+    REINFORCE is a Monte Carlo policy gradient algorithm that directly optimizes a
+    parameterized stochastic policy by maximizing the expected episode return.
 
-    For a state :math:`s`, the policy computes action probabilities as:
+    **Policy Gradient**
+
+    Let :math:`\pi_\theta(a \mid s)` denote a stochastic policy parameterized by
+    :math:`\theta`. The objective is to maximize the expected discounted return:
 
     .. math::
-        \pi_\theta(a \mid s) =
-        \frac{e^{\theta_a^\top\phi(s)}}{\sum_b e^{\theta_b^\top\phi(s)}}
+
+        J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}[U(\tau)]
+
+    where :math:`\tau` is a trajectory sampled from the policy and
+
+    .. math::
+
+        U(\tau) = \sum_t \gamma^t r_t
+
+    Using the likelihood-ratio trick, the policy gradient can be written as:
+
+    .. math::
+
+        \nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}
+        \left[U(\tau) \sum_t \nabla_\theta \log \pi_\theta(a_t \mid s_t) \right]
+
+    REINFORCE approximates this expectation using sampled trajectories and performs
+    gradient ascent on the policy parameters.
+
+    **Linear Softmax Policy**
+
+    The policy is parameterized by a weight matrix :attr:`self.theta` of shape
+    ``(feature_dim, num_actions)``. Each column :math:`\theta_a` contains the weights
+    associated with action :math:`a`.
+
+    Given a state :math:`s`, the policy computes action probabilities using the softmax
+    function:
+
+    .. math::
+
+        \pi_\theta(a \mid s)
+        = \frac{\exp(\theta_a^\top \phi(s))}{\sum_b \exp(\theta_b^\top \phi(s))}
 
     where :math:`\phi(s)` is the feature vector of state :math:`s`.
 
-    The agent collects transitions during each episode and updates the policy parameters
-    at the end of the episode using the REINFORCE algorithm. A running average of past
-    episode returns is maintained as a baseline to reduce the variance of policy gradient
-    updates.
+    The gradient of the log-policy with respect to the weight vector for action :math:`b`
+    is:
+
+    .. math::
+
+        \nabla_{\theta_b} \log \pi_\theta(a \mid s)
+        = \left(\mathbb{1}[a=b] - \pi_\theta(b \mid s) \right) \phi(s)
+
+    Equivalently, the gradient with respect to the entire weight matrix is:
+
+    .. math::
+
+        \nabla_\theta \log \pi_\theta(a \mid s)
+        = \phi(s) \left(\mathbf{I}_a - \boldsymbol{\pi}_\theta(s)\right)^\top
+
+    where :math:`\mathbf{I}_a` is the one-hot vector for the selected action and
+    :math:`\boldsymbol{\pi}_\theta(s)` is the vector of action probabilities.
+
+    **REINFORCE Update**
+
+    At the end of each episode, the agent computes the discounted return :math:`U` and
+    updates the policy parameters by gradient ascent:
+
+    .. math::
+
+        \theta \leftarrow \theta + \alpha (U - b)
+        \sum_t \nabla_\theta \log \pi_\theta(a_t \mid s_t)
+
+    where :math:`\alpha` is the learning rate and :math:`b` is a scalar baseline used to
+    reduce the variance of the gradient estimate.
+
+    Substituting the linear softmax policy gives:
+
+    .. math::
+
+        \theta \leftarrow \theta + \alpha (U - b) \sum_t \phi(s_t)
+        \left( \mathbf{I}_{a_t} - \boldsymbol{\pi}_\theta(s_t) \right)^\top
+
+    **REINFORCE Algorithm**
+
+    For each episode, the agent performs the following steps:
+
+    1. Sample actions from the current softmax policy and collect the trajectory
+       :math:`(s_t, a_t, r_t)`.
+    2. Compute the full discounted episode return :math:`U`.
+    3. Calculate the advantage estimate :math:`U-b` using the current scalar baseline.
+    4. Accumulate the log-policy gradients over all visited state-action pairs and update
+       the policy parameters at the end of the episode.
+    5. Update the running-average baseline using the episode return.
 
     .. note::
+
         Unlike the reward-to-go formulation of REINFORCE in CS234, this implementation
         uses the full discounted episode return for every policy gradient update. It also
         maintains a scalar baseline as a running average of episode returns, initialized
@@ -912,30 +1133,30 @@ class PolicyGradient[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
 
     Args:
         feature_dim (int): Number of features representing each state.
-        feature_extractor (Callable): Function that converts a state into a NumPy feature
-            vector of shape ``(feature_dim,)``.
+        feature_extractor (Callable[[StateT], np.ndarray]): Function that converts a state
+            into a NumPy feature vector of shape ``(feature_dim,)``.
         actions (list[ActionT]): List of available actions.
         discount (float, optional): Discount factor :math:`\gamma` for future rewards.
             Defaults to 0.9.
-        time_limit (int, optional): Maximum number of steps per episode. Defaults to 1000.
         step_size (float, optional): Learning rate for updating policy weights. Defaults
             to 1e-5.
         baseline_step_size (float, optional): Learning rate for updating the baseline.
             Defaults to 0.1.
+        time_limit (int, optional): Maximum number of steps per episode. Defaults to 1000.
         seed (int, optional): Random seed for reproducibility. Defaults to ``None``.
     """
 
     def __init__(
         self,
         feature_dim: int,
-        feature_extractor: Callable[[StateT], np.ndarray],
+        feature_extractor: Callable[[StateT], Array1D],
         actions: list[ActionT],
         discount: float = 0.9,
-        time_limit: int = 1000,
         step_size: float = 1e-5,
         baseline_step_size: float = 0.1,
+        time_limit: int = 1000,
         seed: int | None = None,
-    ):
+    ) -> None:
         """Initialize the ``PolicyGradient`` agent with the specified parameters."""
         self.feature_dim = feature_dim
         self.feature_extractor = feature_extractor
@@ -961,7 +1182,7 @@ class PolicyGradient[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         # tuple for each step.
         self.rollout: list[MDPTransition[StateT, ActionT]] = []
 
-    def get_action_probs(self, state: StateT) -> np.ndarray:
+    def get_action_probs(self, state: StateT) -> Array1D:
         r"""Compute action probabilities using softmax policy.
 
         The softmax policy is defined as:
@@ -976,9 +1197,9 @@ class PolicyGradient[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         Returns:
             Action probabilities of shape ``(num_actions,)``.
         """
-        features = self.feature_extractor(state)
-        preferences = features @ self.theta
-        return softmax(preferences)
+        phi = self.feature_extractor(state)
+        probs = softmax(phi @ self.theta)
+        return probs
 
     @override
     def get_action(self, state: StateT, explore: bool = True) -> ActionT:
@@ -998,15 +1219,19 @@ class PolicyGradient[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         actions = np.array(self.actions)
         return self.rng.choice(actions, p=probs)
 
-    def log_prob_gradient(self, state: StateT, action: ActionT) -> np.ndarray:
+    def log_prob_gradient(self, state: StateT, action: ActionT) -> Array2D:
         r"""Compute the gradient of :math:`\log\pi_\theta(a \mid s)`.
 
         When using linear softmax policy, the gradient of :math:`\log\pi_\theta(a \mid s)`
         can be computed as follows:
 
         .. math::
-            \nabla_\theta \log\pi_\theta(a \mid s) =
-            \phi(s)(I_a - \pi_\theta(\cdot \mid s))^\top
+
+            \nabla_\theta \log \pi_\theta(a \mid s)
+            = \phi(s) \left(\mathbf{I}_a - \boldsymbol{\pi}_\theta(s)\right)^\top
+
+        where :math:`\mathbf{I}_a` is the one-hot vector for the selected action and
+        :math:`\boldsymbol{\pi}_\theta(s)` is the vector of action probabilities.
 
         Args:
             state (StateT): Current environment state.
@@ -1034,14 +1259,21 @@ class PolicyGradient[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
 
         .. math::
 
-            U(\tau) = \sum_{t=0}^{T-1} \gamma^t r_t
+            U(\tau) = \sum_t \gamma^t r_t
 
-        Then, compute the policy gradient using REINFORCE with an optional baseline:
+        Then, estimate the policy gradient using REINFORCE with an optional baseline:
 
         .. math::
 
-            \nabla_\theta J(\theta, \tau) =
-            \sum_t (U(\tau) - b) \nabla_\theta \log \pi_\theta(a_t \mid s_t)
+            \nabla_\theta J(\theta, \tau) = (U(\tau) - b) \sum_t
+            \nabla_\theta \log \pi_\theta(a_t \mid s_t)
+
+        For the linear softmax policy, the gradient becomes:
+
+        .. math::
+
+            \nabla_\theta J(\theta, \tau) = (U(\tau) - b) \sum_t \phi(s_t)
+            \left(\mathbf{I}_{a_t} - \boldsymbol{\pi}_\theta(s_t)\right)^\top
 
         Update the policy parameters using gradient ascent:
 
@@ -1049,8 +1281,8 @@ class PolicyGradient[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
 
             \theta \leftarrow \theta + \alpha_\theta \nabla_\theta J(\theta, \tau)
 
-        If a baseline is used, update it toward the observed return to reduce the variance
-        of policy gradient estimates:
+        If a baseline is used, update it toward the observed return to reduce
+        the variance of policy gradient estimates:
 
         .. math::
 
@@ -1091,7 +1323,7 @@ class PolicyGradient[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
 
         This function is called by the simulator after each step of the episode. It
         appends the current step's transition to :attr:`self.rollout`, and if the episode
-        ends, it calls :meth:`update_policy()` to update the policy parameters theta
+        ends, it calls :meth:`update_policy()` to update the policy parameters :math:`\theta`
         and clears the rollout for the next episode.
 
         Unlike Q-learning, REINFORCE waits until the rollout is complete before updating
@@ -1099,7 +1331,8 @@ class PolicyGradient[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
 
         Args:
             transition (MDPTransition): A tuple containing the current step's transition
-                information: state, action, reward, next_state, and terminal flag.
+                information: state, action, reward, next_state, and termination/truncation
+                flags.
         """
         # Unlike Q-learning, REINFORCE can't update after every step.
         # The weight U(\tau) - b needs the rewards of the whole rollout.
@@ -1108,35 +1341,54 @@ class PolicyGradient[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
 
         # The rollout ends when the car reaches the flag (terminal is True) or
         # runs out of time.
-        # simulate() ends an episode after `time_limit` steps without passing
-        # `terminal=True`, so we also count steps.
-        if transition.terminal or len(self.rollout) == self.time_limit:
+        if transition.terminated or transition.truncated:
             self.update_policy()  # One gradient ascent step on J
             self.rollout.clear()  # Start a new rollout
 
 
 # Problem 6f: Bootstrapped Policy Gradient
 class BootstrappedPolicyGradient[StateT, ActionT](PolicyGradient[StateT, ActionT]):
-    r"""Rollout-based Actor-Critic with TD(0) advantage estimation.
+    r"""Rollout-based actor-critic with bootstrapped TD(0) advantages.
 
     This agent extends :class:`PolicyGradient` by introducing a learned state-value
-    function as a critic. Unlike standard REINFORCE, which uses Monte Carlo returns,
-    this algorithm uses bootstrapped TD(0) advantage estimates to update the policy.
+    function as a critic. Unlike REINFORCE, which uses Monte Carlo returns, this
+    algorithm estimates the advantage using one-step temporal-difference (TD)
+    bootstrapping.
 
-    The actor and critic are implemented within the same agent:
+    The actor and critic are parameterized separately:
 
-    - **Actor:** The policy :math:`\pi_\theta(a \mid s)`, parameterized by :attr:`theta`.
-    - **Critic:** The state-value function :math:`V_\phi(s)`, implemented by :attr:`value_function`.
+    - **Actor:** A stochastic policy :math:`\pi_\theta(a \mid s)`, parameterized by
+      :attr:`theta`.
+    - **Critic:** A linear state-value function :math:`V_\phi(s)`, implemented by
+      :attr:`value_function`.
 
-    The critic estimates the one-step TD advantage:
+    For each transition, the critic provides a TD(0) advantage estimate:
 
     .. math::
 
         \delta_t = r_t + \gamma V_\phi(s_{t+1}) - V_\phi(s_t)
 
-    The actor uses this estimate for policy gradient ascent, while the critic learns
-    using semi-gradient TD(0). Both components are updated after each completed rollout,
-    with the actor updated before the critic.
+    where :math:`V_\phi(s_{t+1}) = 0` for terminal transitions.
+
+    After a completed rollout, the actor accumulates policy gradients weighted by these
+    advantages and performs a single gradient ascent update:
+
+    .. math::
+
+        \theta \leftarrow \theta +
+        \alpha_\theta \sum_t \delta_t
+        \nabla_\theta \log \pi_\theta(a_t \mid s_t)
+
+    The critic is then updated using semi-gradient TD(0):
+
+    .. math::
+
+        \phi \leftarrow \phi +
+        \alpha_\phi \delta_t \nabla_\phi V_\phi(s_t)
+
+    The actor is updated before the critic, keeping the value estimates fixed during
+    actor gradient accumulation. Critic updates are applied sequentially over the collected
+    transitions.
 
     Args:
         feature_dim (int): Number of features representing each state.
@@ -1145,56 +1397,61 @@ class BootstrappedPolicyGradient[StateT, ActionT](PolicyGradient[StateT, ActionT
         actions (list[ActionT]): List of available actions.
         discount (float, optional): Discount factor :math:`\gamma` for future rewards.
             Defaults to 0.9.
-        time_limit (int, optional): Maximum number of steps per episode. Defaults to 1000.
         step_size (float, optional): Learning rate for updating policy weights. Defaults
             to 1e-5.
+        baseline_step_size (float, optional): Learning rate for updating the baseline.
+            Defaults to 0.1.
+        time_limit (int, optional): Maximum number of steps per episode. Defaults to 1000.
+        seed (int, optional): Random seed for reproducibility. Defaults to ``None``.
     """
 
     def __init__(
         self,
         feature_dim: int,
-        feature_extractor: Callable[[StateT], np.ndarray],
+        feature_extractor: Callable[[StateT], Array1D],
         actions: list[ActionT],
-        discount: float,
-        time_limit: int,
+        discount: float = 0.9,
         step_size: float = 1e-5,
-    ):
+        baseline_step_size: float = 0.1,
+        time_limit: int = 1000,
+        seed: int | None = None,
+    ) -> None:
         """Initialize the ``BootstrappedPolicyGradient`` agent with the specified parameters."""
         super().__init__(
             feature_dim,
             feature_extractor,
             actions,
             discount=discount,
-            time_limit=time_limit,
             step_size=step_size,
+            baseline_step_size=baseline_step_size,
+            time_limit=time_limit,
+            seed=seed,
         )
         self.value_function = LinearValueFunction(
             feature_dim,
             feature_extractor,
             step_size=step_size,
+            discount=discount,
         )
 
     @override
     def update_policy(self) -> None:
         r"""Update the actor using bootstrapped TD(0) advantages.
 
-        This method performs the policy gradient update of a rollout-based Actor-Critic
-        algorithm. The actor is parameterized by :attr:`theta`, while the critic is
-        represented by :attr:`value_function`.
-
         For each transition in the rollout, compute the one-step TD advantage:
 
         .. math::
 
-            \delta_t = r_t + \gamma V_\phi(s_{t+1}) - V_\phi(s_t),
+            \delta_t = r_t + \gamma V_\phi(s_{t+1}) - V_\phi(s_t)
 
         where :math:`V_\phi(s_{t+1}) = 0` for terminal transitions.
 
-        The policy gradient estimate is accumulated over the rollout:
+        The policy gradient is accumulated over the rollout:
 
         .. math::
 
-            \hat{g} = \sum_t \delta_t \nabla_\theta \log \pi_\theta(a_t \mid s_t)
+            \hat{g} = \sum_t \delta_t
+            \nabla_\theta \log \pi_\theta(a_t \mid s_t)
 
         The actor parameters are then updated by gradient ascent:
 
@@ -1202,19 +1459,13 @@ class BootstrappedPolicyGradient[StateT, ActionT](PolicyGradient[StateT, ActionT
 
             \theta \leftarrow \theta + \alpha_\theta \hat{g}
 
-        Unlike standard REINFORCE with a baseline, which uses the Monte Carlo advantage,
-        this method uses a bootstrapped TD(0) advantage estimate.
-
-        .. note::
-
-            The critic parameters remain fixed throughout this method. The critic is
-            updated afterward by :meth:`step` using semi-gradient TD(0). The actor update
-            occurs once per completed rollout rather than after every environment transition.
+        The critic remains fixed during this update and is trained separately using
+        semi-gradient TD(0) after the actor update.
         """
         gradient = np.zeros_like(self.theta)
 
         for T in self.rollout:
-            if T.terminal:
+            if T.terminated:
                 next_value = 0.0
             else:
                 next_value = self.value_function.get_v(T.next_state)
@@ -1234,21 +1485,26 @@ class BootstrappedPolicyGradient[StateT, ActionT](PolicyGradient[StateT, ActionT
 
         This function is called by the simulator after each step of the episode. It
         appends the current step's transition to :attr:`self.rollout`, and if the episode
-        ends, it calls :meth:`update_policy()` to update the policy parameters theta, the
-        baseline value function, and clears the rollout for the next episode.
+        ends, it calls :meth:`update_policy()` to update the policy parameters :math:`\theta`,
+        the baseline value function, and clears the rollout for the next episode.
 
         Args:
             transition (MDPTransition): A tuple containing the current step's transition
-                information: state, action, reward, next_state, and terminal flag.
+                information: state, action, reward, next_state, and termination/truncation
+                flags.
+
+        .. note::
+
+            This implementation updates the actor and critic only after a complete episode.
+            However, since TD(0) uses one-step bootstrapping, both can also be updated after
+            each environment step.
         """
         self.rollout.append(transition)
 
-        if transition.terminal or len(self.rollout) == self.time_limit:
+        if transition.terminated or transition.truncated:
             self.update_policy()
 
             for T in self.rollout:
-                self.value_function.update(
-                    T.state, T.reward, T.next_state, self.discount, T.terminal
-                )
+                self.value_function.update(T)
 
             self.rollout.clear()
