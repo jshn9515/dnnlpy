@@ -21,19 +21,19 @@ def test_problem_4a_0():
         epsilon=0.15,
     )
 
-    rl.step(a4.MDPTransition(2, 0, -5, 3, False))
+    rl.step(a4.MDPTransition(2, 0, -5, 3, False, False))
 
     assert rl.Q[1 + mdp.n, mdp.actions.index(1)] == 0
     assert rl.Q[1 + mdp.n, mdp.actions.index(0)] == 0
     assert rl.Q[mdp.n, mdp.actions.index(0)] == -0.5
 
-    rl.step(a4.MDPTransition(3, 0, 50, 4, True))
+    rl.step(a4.MDPTransition(3, 0, 50, 4, True, False))
 
     assert rl.Q[1 + mdp.n, mdp.actions.index(0)] == 5.0
     assert rl.Q[1 + mdp.n, mdp.actions.index(1)] == 0
     assert rl.Q[mdp.n, mdp.actions.index(0)] == -0.5
 
-    rl.step(a4.MDPTransition(1, 1, -5, 2, False))
+    rl.step(a4.MDPTransition(1, 1, -5, 2, False, False))
 
     assert rl.Q[1 + mdp.n, mdp.actions.index(0)] == 5.0
     assert rl.Q[1 + mdp.n, mdp.actions.index(1)] == 0
@@ -54,14 +54,14 @@ def test_problem_4a_0():
     )
 
     # 1 + 0.1 * (50 + 0 - 1) = 5.9
-    rl.step(a4.MDPTransition(3, 0, 50, 4, True))
+    rl.step(a4.MDPTransition(3, 0, 50, 4, True, False))
     if not rl.Q[1 + mdp.n, mdp.actions.index(0)] == 5.9:
         raise AssertionError(
             'Incorrect Q-value after a transition to a terminal state.'
         )
 
     # 1 + 0.1 * (-5 + 0.9 * 5.9 - 1) = 0.931
-    rl.step(a4.MDPTransition(2, 1, -5, 3, False))
+    rl.step(a4.MDPTransition(2, 1, -5, 3, False, False))
     if not rl.Q[mdp.n, mdp.actions.index(1)] == 0.931:
         raise AssertionError('Incorrect Q-value with discount 0.9')
 
@@ -78,19 +78,19 @@ def test_problem_4a_1():
         epsilon=0.15,
     )
 
-    rl.step(a4.MDPTransition(2, 0, -5, 3, False))
-    rl.step(a4.MDPTransition(2, 0, -5, 3, False))
-    rl.step(a4.MDPTransition(2, 0, -5, 1, False))
-    rl.step(a4.MDPTransition(2, 1, -5, 3, False))
-    rl.step(a4.MDPTransition(2, 1, -5, 1, False))
-    rl.step(a4.MDPTransition(3, 0, 50, 4, True))
-    rl.step(a4.MDPTransition(3, 0, 50, 4, True))
-    rl.step(a4.MDPTransition(3, 0, -5, 2, False))
-    rl.step(a4.MDPTransition(3, 1, 50, 4, True))
-    rl.step(a4.MDPTransition(3, 1, -5, 2, False))
-    rl.step(a4.MDPTransition(1, 0, -5, 2, False))
-    rl.step(a4.MDPTransition(1, 0, 10, 0, True))
-    rl.step(a4.MDPTransition(1, 1, -5, 2, False))
+    rl.step(a4.MDPTransition(2, 0, -5, 3, False, False))
+    rl.step(a4.MDPTransition(2, 0, -5, 3, False, False))
+    rl.step(a4.MDPTransition(2, 0, -5, 1, False, False))
+    rl.step(a4.MDPTransition(2, 1, -5, 3, False, False))
+    rl.step(a4.MDPTransition(2, 1, -5, 1, False, False))
+    rl.step(a4.MDPTransition(3, 0, 50, 4, True, False))
+    rl.step(a4.MDPTransition(3, 0, 50, 4, True, False))
+    rl.step(a4.MDPTransition(3, 0, -5, 2, False, False))
+    rl.step(a4.MDPTransition(3, 1, 50, 4, True, False))
+    rl.step(a4.MDPTransition(3, 1, -5, 2, False, False))
+    rl.step(a4.MDPTransition(1, 0, -5, 2, False, False))
+    rl.step(a4.MDPTransition(1, 0, 10, 0, True, False))
+    rl.step(a4.MDPTransition(1, 1, -5, 2, False, False))
 
     pi = {-1: 0, 0: 1, 1: 0}
     for state in range(-mdp.n + 1, mdp.n):
@@ -109,19 +109,19 @@ def test_problem_4a_2_hidden():
         epsilon=0.15,
     )
 
-    rl.step(a4.MDPTransition(2, 0, -5, 3, False))
-    rl.step(a4.MDPTransition(2, 0, -5, 3, False))
-    rl.step(a4.MDPTransition(2, 0, -5, 1, False))
-    rl.step(a4.MDPTransition(2, 1, -5, 3, False))
-    rl.step(a4.MDPTransition(2, 1, -5, 1, False))
-    rl.step(a4.MDPTransition(3, 0, 50, 4, True))
-    rl.step(a4.MDPTransition(3, 0, 50, 4, True))
-    rl.step(a4.MDPTransition(3, 0, -5, 2, False))
-    rl.step(a4.MDPTransition(3, 1, 50, 4, True))
-    rl.step(a4.MDPTransition(3, 1, -5, 2, False))
-    rl.step(a4.MDPTransition(1, 0, -5, 2, False))
-    rl.step(a4.MDPTransition(1, 0, 10, 0, True))
-    rl.step(a4.MDPTransition(1, 1, -5, 2, False))
+    rl.step(a4.MDPTransition(2, 0, -5, 3, False, False))
+    rl.step(a4.MDPTransition(2, 0, -5, 3, False, False))
+    rl.step(a4.MDPTransition(2, 0, -5, 1, False, False))
+    rl.step(a4.MDPTransition(2, 1, -5, 3, False, False))
+    rl.step(a4.MDPTransition(2, 1, -5, 1, False, False))
+    rl.step(a4.MDPTransition(3, 0, 50, 4, True, False))
+    rl.step(a4.MDPTransition(3, 0, 50, 4, True, False))
+    rl.step(a4.MDPTransition(3, 0, -5, 2, False, False))
+    rl.step(a4.MDPTransition(3, 1, 50, 4, True, False))
+    rl.step(a4.MDPTransition(3, 1, -5, 2, False, False))
+    rl.step(a4.MDPTransition(1, 0, -5, 2, False, False))
+    rl.step(a4.MDPTransition(1, 0, 10, 0, True, False))
+    rl.step(a4.MDPTransition(1, 1, -5, 2, False, False))
 
 
 @timeout
@@ -150,11 +150,11 @@ def test_problem_4c_0():
     )
     rl.weight = np.zeros((36, 3))
 
-    rl.step(a4.MDPTransition((0, 0), 1, -1, (-0.2, -0.01), False))
-    rl.step(a4.MDPTransition((0.7, -0.03), 2, -1, (0.8, -0.01), False))
-    rl.step(a4.MDPTransition((-0.3, -0.05), 0, -1, (-0.4, -0.03), False))
+    rl.step(a4.MDPTransition((0, 0), 1, -1, (-0.2, -0.01), False, False))
+    rl.step(a4.MDPTransition((0.7, -0.03), 2, -1, (0.8, -0.01), False, False))
+    rl.step(a4.MDPTransition((-0.3, -0.05), 0, -1, (-0.4, -0.03), False, False))
 
-    actual = rl.get_q((0.2, -0.02), 1)
+    actual = rl.get_single_q((0.2, -0.02), 1)
     expected = -0.0074065262637628875
 
     if not math.isclose(actual, expected, abs_tol=1e-6):
@@ -173,9 +173,9 @@ def test_problem_4c_1():
     )
     rl.weight = np.zeros((36, 3))
 
-    rl.step(a4.MDPTransition((0, 0), 1, -1, (-0.2, -0.01), False))
-    rl.step(a4.MDPTransition((0.7, -0.03), 2, -1, (0.8, -0.01), False))
-    rl.step(a4.MDPTransition((-0.3, -0.05), 0, -1, (-0.4, -0.03), False))
+    rl.step(a4.MDPTransition((0, 0), 1, -1, (-0.2, -0.01), False, False))
+    rl.step(a4.MDPTransition((0.7, -0.03), 2, -1, (0.8, -0.01), False, False))
+    rl.step(a4.MDPTransition((-0.3, -0.05), 0, -1, (-0.4, -0.03), False, False))
 
     action = rl.get_action((0.2, -0.02), explore=False)
     assert action == 0
@@ -199,9 +199,9 @@ def test_problem_4c_2():
     )
     rl.weight = np.zeros((36, 3))
 
-    rl.step(a4.MDPTransition((0, 0), 1, -1, (-0.2, -0.01), False))
-    rl.step(a4.MDPTransition((0.7, -0.03), 2, -1, (0.8, -0.01), False))
-    rl.step(a4.MDPTransition((-0.3, -0.05), 0, -1, (-0.4, -0.03), False))
+    rl.step(a4.MDPTransition((0, 0), 1, -1, (-0.2, -0.01), False, False))
+    rl.step(a4.MDPTransition((0.7, -0.03), 2, -1, (0.8, -0.01), False, False))
+    rl.step(a4.MDPTransition((-0.3, -0.05), 0, -1, (-0.4, -0.03), False, False))
 
     gold = np.load(FIXTURES_PATH / '4c-2-gold.npy', allow_pickle=True)
     actual = np.sort(rl.weight, axis=0)
@@ -221,15 +221,15 @@ def test_problem_4c_2():
     )
     rl.weight = np.ones((36, 3))
 
-    rl.step(a4.MDPTransition((0.2, 0.01), 0, -1, (0.25, 0.02), False))
-    actual = rl.get_q((0.2, 0.01), 0)
+    rl.step(a4.MDPTransition((0.2, 0.01), 0, -1, (0.25, 0.02), False, False))
+    actual = rl.get_single_q((0.2, 0.01), 0)
     expected = -11.089247347330799
 
     if not math.isclose(actual, expected, abs_tol=1e-6):
         raise AssertionError('Weight update incorrect with discount 0.9.')
 
-    rl.step(a4.MDPTransition((0.4, 0.03), 2, -1, (0.5, 0.04), True))
-    actual = rl.get_q((0.4, 0.03), 2)
+    rl.step(a4.MDPTransition((0.4, 0.03), 2, -1, (0.5, 0.04), True, False))
+    actual = rl.get_single_q((0.4, 0.03), 2)
     expected = 1.0601519022049946
 
     if not math.isclose(actual, expected, abs_tol=1e-6):

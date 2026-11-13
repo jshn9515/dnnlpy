@@ -103,13 +103,13 @@ def test_problem_3a_1():
     R = np.zeros((5, 2, 5))
 
     for T in (
-        a4.MDPTransition(0, 0, 0, 1, True),
-        a4.MDPTransition(0, 1, 5, 2, True),
-        a4.MDPTransition(1, 0, 10, 2, True),
-        a4.MDPTransition(1, 1, -2, 2, True),
-        a4.MDPTransition(3, 0, -1, 2, True),
-        a4.MDPTransition(4, 0, 0, 3, True),
-        a4.MDPTransition(4, 1, -0.95, 2, True),
+        a4.MDPTransition(0, 0, 0, 1, True, False),
+        a4.MDPTransition(0, 1, 5, 2, True, False),
+        a4.MDPTransition(1, 0, 10, 2, True, False),
+        a4.MDPTransition(1, 1, -2, 2, True, False),
+        a4.MDPTransition(3, 0, -1, 2, True, False),
+        a4.MDPTransition(4, 0, 0, 3, True, False),
+        a4.MDPTransition(4, 1, -0.95, 2, True, False),
     ):
         P[T.state, T.action, T.next_state] = 1.0
         R[T.state, T.action, T.next_state] = T.reward
@@ -125,7 +125,7 @@ def test_problem_3a_1():
         dtype=np.bool_,
     )
 
-    vi = a4.ValueIteration(P, R, 0.9, valid_actions=valid_actions)
+    vi = a4.ValueIteration(P, R, 0.9, action_mask=valid_actions)
     pi = vi.compute_policy()
 
     for state, expected in enumerate([1, 1, -1, 0, 0]):
@@ -197,10 +197,10 @@ def test_problem_3b_1():
 
     rl = make_rl(mdp, calc_val_iter_every=100)
     rl.num_iters = 1
-    rl.step(a4.MDPTransition(3, 0, 50, 4, True))
-    rl.step(a4.MDPTransition(3, 0, -5, 2, False))
+    rl.step(a4.MDPTransition(3, 0, 50, 4, True, False))
+    rl.step(a4.MDPTransition(3, 0, -5, 2, False, False))
     rl.num_iters = 100
-    rl.step(a4.MDPTransition(1, 1, 10, 0, True))
+    rl.step(a4.MDPTransition(1, 1, 10, 0, True, False))
 
     gold = {-1: 1, 1: 0}
     for state, expected in gold.items():
@@ -221,11 +221,11 @@ def test_problem_3b_1():
     # so the policy picks action 0.
     rl = make_rl(mdp, calc_val_iter_every=100)
     rl.num_iters = 1
-    rl.step(a4.MDPTransition(3, 0, -5, 2, False))
-    rl.step(a4.MDPTransition(3, 1, -8, 2, False))
-    rl.step(a4.MDPTransition(3, 1, -8, 4, True))
+    rl.step(a4.MDPTransition(3, 0, -5, 2, False, False))
+    rl.step(a4.MDPTransition(3, 1, -8, 2, False, False))
+    rl.step(a4.MDPTransition(3, 1, -8, 4, True, False))
     rl.num_iters = 100
-    rl.step(a4.MDPTransition(1, 0, -5, 2, False))
+    rl.step(a4.MDPTransition(1, 0, -5, 2, False, False))
 
     idx = 1 + mdp.n
     if not rl.actions[rl.pi_indices[idx]] == 0:
@@ -240,20 +240,20 @@ def test_problem_3b_2():
     mdp = a4.NumberLineMDP(a4.NumberLineEnv())
     rl = make_rl(mdp, calc_val_iter_every=100)
     rl.num_iters = 1
-    rl.step(a4.MDPTransition(2, 0, -5, 3, False))
-    rl.step(a4.MDPTransition(2, 0, -5, 3, False))
-    rl.step(a4.MDPTransition(2, 0, -5, 1, False))
-    rl.step(a4.MDPTransition(2, 1, -5, 3, False))
-    rl.step(a4.MDPTransition(2, 1, -5, 1, False))
-    rl.step(a4.MDPTransition(3, 0, 50, 4, True))
-    rl.step(a4.MDPTransition(3, 0, 50, 4, True))
-    rl.step(a4.MDPTransition(3, 0, -5, 2, False))
-    rl.step(a4.MDPTransition(3, 1, 50, 4, True))
-    rl.step(a4.MDPTransition(3, 1, -5, 2, False))
-    rl.step(a4.MDPTransition(1, 0, -5, 2, False))
-    rl.step(a4.MDPTransition(1, 1, -5, 2, False))
+    rl.step(a4.MDPTransition(2, 0, -5, 3, False, False))
+    rl.step(a4.MDPTransition(2, 0, -5, 3, False, False))
+    rl.step(a4.MDPTransition(2, 0, -5, 1, False, False))
+    rl.step(a4.MDPTransition(2, 1, -5, 3, False, False))
+    rl.step(a4.MDPTransition(2, 1, -5, 1, False, False))
+    rl.step(a4.MDPTransition(3, 0, 50, 4, True, False))
+    rl.step(a4.MDPTransition(3, 0, 50, 4, True, False))
+    rl.step(a4.MDPTransition(3, 0, -5, 2, False, False))
+    rl.step(a4.MDPTransition(3, 1, 50, 4, True, False))
+    rl.step(a4.MDPTransition(3, 1, -5, 2, False, False))
+    rl.step(a4.MDPTransition(1, 0, -5, 2, False, False))
+    rl.step(a4.MDPTransition(1, 1, -5, 2, False, False))
     rl.num_iters = 100
-    rl.step(a4.MDPTransition(1, 1, 10, 0, True))
+    rl.step(a4.MDPTransition(1, 1, 10, 0, True, False))
 
     gold = {-1: 0, 0: 0, 1: 0}
     for state, expected in gold.items():
