@@ -18,8 +18,10 @@ repos:
         files: \.(py|md)$
         types_or: [python, markdown]
 
-  - repo: https://github.com/astral-sh/ty-pre-commit
-    rev: v0.0.99
+  - repo: local
     hooks:
       - id: ty
-        args: [--locked]
+        name: ty
+        entry: ty check
+        language: system
+        pass_filenames: false
