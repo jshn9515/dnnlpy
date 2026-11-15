@@ -429,7 +429,8 @@ def main() -> None:
         help='Choose feature extractor mode for function-approx and constrained Q-learning. '
         'Available options are: '
         '1. `raw` for raw Fourier features, '
-        '2. `normalized` for normalized Fourier features.',
+        '2. `normalized` for normalized Fourier features.'
+        'Note: This argument must match the mode used during training.',
     )
     parser.add_argument(
         '--seed',
