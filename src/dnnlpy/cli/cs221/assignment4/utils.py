@@ -3,10 +3,31 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
+import dnnlpy.cs221.assignment4 as a4
+
 __all__ = [
-    'moving_average',
+    'normalized_fourier_extractor',
     'plot_rewards',
+    'raw_fourier_extractor',
 ]
+
+
+def raw_fourier_extractor(state: np.ndarray, max_coeff: int = 5) -> np.ndarray:
+    """Extracts raw features from the state using Fourier basis functions."""
+    return a4.fourier_feature_extractor(state, max_coeff=max_coeff, scale=[1, 15])
+
+
+def normalized_fourier_extractor(
+    mdp: a4.ContinuousMountainCarMDP,
+    state: np.ndarray,
+    max_coeff: int = 5,
+) -> np.ndarray:
+    """Extracts normalized features from the state using Fourier basis functions."""
+    return a4.fourier_feature_extractor(
+        (state - mdp.base_env.low) / (mdp.base_env.high - mdp.base_env.low),
+        max_coeff=max_coeff,
+        scale=[1, 1],
+    )
 
 
 def moving_average(x: np.ndarray, window: int) -> np.ndarray:
