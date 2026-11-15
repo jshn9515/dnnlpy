@@ -44,7 +44,10 @@ def train_value_iteration(args: argparse.Namespace) -> None:
     for i in range(args.num_trials):
         trial_seed = None if args.seed is None else args.seed + i
         mdp = a4.DiscreteMountainCarMDP(
-            a4.CustomMountainCarEnv(max_speed=args.max_speed, seed=trial_seed),
+            a4.CustomMountainCarEnv(
+                max_speed=args.max_speed,
+                seed=trial_seed,
+            ),
             bins=20,
             discount=args.discount,
             time_limit=args.time_limit,
@@ -100,7 +103,10 @@ def train_tabular_q_learning(args: argparse.Namespace) -> None:
     for i in range(args.num_trials):
         trial_seed = None if args.seed is None else args.seed + i
         mdp = a4.DiscreteMountainCarMDP(
-            a4.CustomMountainCarEnv(max_speed=args.max_speed, seed=trial_seed),
+            a4.CustomMountainCarEnv(
+                max_speed=args.max_speed,
+                seed=trial_seed,
+            ),
             bins=20,
             discount=args.discount,
             time_limit=args.time_limit,
@@ -151,7 +157,10 @@ def train_function_approx_q_learning(args: argparse.Namespace) -> None:
     for i in range(args.num_trials):
         trial_seed = None if args.seed is None else args.seed + i
         mdp = a4.ContinuousMountainCarMDP(
-            a4.CustomMountainCarEnv(max_speed=args.max_speed, seed=trial_seed),
+            a4.CustomMountainCarEnv(
+                max_speed=args.max_speed,
+                seed=trial_seed,
+            ),
             discount=args.discount,
             time_limit=args.time_limit,
         )
@@ -212,7 +221,10 @@ def train_constrained_q_learning(args: argparse.Namespace) -> None:
     for i in range(args.num_trials):
         trial_seed = None if args.seed is None else args.seed + i
         mdp = a4.ContinuousMountainCarMDP(
-            a4.CustomMountainCarEnv(max_speed=args.max_speed, seed=trial_seed),
+            a4.CustomMountainCarEnv(
+                max_speed=args.max_speed,
+                seed=trial_seed,
+            ),
             discount=args.discount,
             time_limit=args.time_limit,
         )
@@ -272,7 +284,10 @@ def train_policy_gradient(args: argparse.Namespace) -> None:
     for i in range(args.num_trials):
         trial_seed = None if args.seed is None else args.seed + i
         mdp = a4.ContinuousMountainCarMDP(
-            a4.CustomMountainCarEnv(max_speed=args.max_speed, seed=trial_seed),
+            a4.CustomMountainCarEnv(
+                max_speed=args.max_speed,
+                seed=trial_seed,
+            ),
             discount=args.discount,
             time_limit=args.time_limit,
         )
@@ -355,7 +370,10 @@ def train_actor_critic(args: argparse.Namespace) -> None:
     for i in range(args.num_trials):
         trial_seed = None if args.seed is None else args.seed + i
         mdp = a4.ContinuousMountainCarMDP(
-            a4.CustomMountainCarEnv(max_speed=args.max_speed, seed=trial_seed),
+            a4.CustomMountainCarEnv(
+                max_speed=args.max_speed,
+                seed=trial_seed,
+            ),
             discount=args.discount,
             time_limit=args.time_limit,
         )
