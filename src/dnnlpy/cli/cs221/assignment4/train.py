@@ -427,7 +427,7 @@ def train_actor_critic(args: argparse.Namespace) -> None:
 
 
 def train_all_agents(args: argparse.Namespace) -> None:
-    logger.info('Training four agents from the same seed to perform MountainCar task.')
+    logger.info('Training six agents from the same seed to perform MountainCar task.')
 
     for i in range(args.num_trials):
         logger.info(f'Starting training for trial {i} of all agents.')
