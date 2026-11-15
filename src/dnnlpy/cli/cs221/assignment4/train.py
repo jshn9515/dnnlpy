@@ -302,7 +302,7 @@ def train_policy_gradient(args: argparse.Namespace) -> None:
                 rl,
                 args.num_eval_episodes,
                 train=False,
-                eval_mode=args.eval_mode,
+                eval_mode='sample',
                 verbose=False,
             )
             logger.info(
@@ -384,7 +384,7 @@ def train_actor_critic(args: argparse.Namespace) -> None:
                 rl,
                 args.num_eval_episodes,
                 train=False,
-                eval_mode=args.eval_mode,
+                eval_mode='sample',
                 verbose=False,
             )
             logger.info(
