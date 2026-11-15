@@ -8,6 +8,7 @@ import dnnlpy.cs221.assignment4 as a4
 __all__ = [
     'normalized_fourier_extractor',
     'plot_rewards',
+    'plot_training_curves',
     'raw_fourier_extractor',
 ]
 
@@ -110,6 +111,48 @@ def plot_rewards(
             color='darkorange',
             linewidth=2,
             label='eval moving average (greedy)',
+        )
+
+    ax.legend(loc='lower right')
+    ax.set_xlabel('Episode')
+    ax.set_ylabel('Discounted Reward in Episode')
+
+    if path:
+        fig.savefig(path, bbox_inches='tight')
+    if show:
+        plt.show()
+
+
+def plot_training_curves(
+    curves: list[tuple[str, np.ndarray]],
+    scatter: bool = True,
+    path: str | None = None,
+    show: bool = True,
+) -> None:
+    """
+    Plots several training runs together: for each (label, rewards) in curves, the reward of every
+    episode (if scatter is True) and its moving average over 30 episodes.
+    """
+    window = 30
+
+    plt.rc('font', size=12)
+    fig = plt.figure(figsize=(10, 5))
+    ax = fig.add_subplot(1, 1, 1)
+
+    for label, rewards in curves:
+        if scatter:
+            ax.scatter(
+                range(len(rewards)),
+                rewards,
+                s=5,
+                linewidth=0,
+                alpha=0.3,
+            )
+        ax.plot(
+            range(window // 2, len(rewards) - window // 2),
+            moving_average(rewards, window),
+            linewidth=2,
+            label=f'{label} (moving average)',
         )
 
     ax.legend(loc='lower right')
