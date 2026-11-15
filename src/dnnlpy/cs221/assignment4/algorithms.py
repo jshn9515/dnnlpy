@@ -873,6 +873,31 @@ class ConstrainedQLearning(FunctionApproxQLearning[np.ndarray, int]):
         self.gravity = gravity
         self.max_speed = max_speed
 
+    def get_valid_actions(self, state: Array1D) -> list[int]:
+        """Get the list of valid actions for the given state based on predicted next velocity.
+
+        Args:
+            state (np.ndarray): Current state containing position and velocity, with shape
+                ``(2,)``.
+
+        Returns:
+            list[int]: A list of valid actions that satisfy the velocity constraint.
+        """
+        position, velocity = map(float, state)
+        valid_actions = []
+
+        for action in self.actions:
+            next_velocity = (
+                velocity
+                + (action - 1) * self.force
+                - math.cos(3 * position) * self.gravity
+            )
+
+            if self.max_speed is None or abs(next_velocity) < self.max_speed:
+                valid_actions.append(action)
+
+        return valid_actions
+
     @override
     def get_action(self, state: Array1D, explore: bool = True) -> int | None:
         r"""Select an action using an epsilon-greedy policy with velocity constraints.
@@ -913,19 +938,7 @@ class ConstrainedQLearning(FunctionApproxQLearning[np.ndarray, int]):
         else:  # >1e5
             epsilon = self.epsilon / math.log(self.num_iters - 1e5 + 1)  # decay
 
-        position, velocity = map(float, state)
-        valid_actions: list[int] = []
-
-        for action in self.actions:
-            next_velocity = (
-                velocity
-                + (action - 1) * self.force
-                - math.cos(3 * position) * self.gravity
-            )
-
-            if self.max_speed is None or abs(next_velocity) < self.max_speed:
-                valid_actions.append(action)
-
+        valid_actions = self.get_valid_actions(state)
         if not valid_actions:
             return None
 
@@ -935,6 +948,34 @@ class ConstrainedQLearning(FunctionApproxQLearning[np.ndarray, int]):
             return max(
                 valid_actions, key=lambda action: self.get_single_q(state, action)
             )
+
+    @override
+    def step(self, transition: MDPTransition[np.ndarray, int]) -> None:
+        """Update the action-specific weights using an observed transition with velocity
+        constraints.
+
+        Args:
+            transition (MDPTransition): A tuple containing the current step's transition
+                information: state, action, reward, next_state, and termination/truncation
+                flags.
+        """
+        T = transition
+        a = self.actions.index(T.action)
+        phi = self._features(T.state)
+        old_q = self.get_single_q(T.state, T.action)
+
+        if T.terminated:
+            target = T.reward
+        else:
+            if valid_actions := self.get_valid_actions(T.next_state):
+                next_q = max(
+                    self.get_single_q(T.next_state, action) for action in valid_actions
+                )
+                target = T.reward + self.discount * next_q
+            else:
+                target = T.reward
+
+        self.weight[:, a] += self.step_size * (target - old_q) * phi
 
 
 class LinearValueFunction[StateT]:
