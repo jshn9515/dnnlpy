@@ -3,10 +3,32 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
+import dnnlpy.cs221.assignment4 as a4
+
 __all__ = [
-    'moving_average',
+    'normalized_fourier_extractor',
     'plot_rewards',
+    'plot_training_curves',
+    'raw_fourier_extractor',
 ]
+
+
+def raw_fourier_extractor(state: np.ndarray, max_coeff: int = 5) -> np.ndarray:
+    """Extracts raw features from the state using Fourier basis functions."""
+    return a4.fourier_feature_extractor(state, max_coeff=max_coeff, scale=[1, 15])
+
+
+def normalized_fourier_extractor(
+    mdp: a4.ContinuousMountainCarMDP,
+    state: np.ndarray,
+    max_coeff: int = 5,
+) -> np.ndarray:
+    """Extracts normalized features from the state using Fourier basis functions."""
+    return a4.fourier_feature_extractor(
+        (state - mdp.base_env.low) / (mdp.base_env.high - mdp.base_env.low),
+        max_coeff=max_coeff,
+        scale=[1, 1],
+    )
 
 
 def moving_average(x: np.ndarray, window: int) -> np.ndarray:
@@ -19,13 +41,13 @@ def moving_average(x: np.ndarray, window: int) -> np.ndarray:
 def plot_rewards(
     train_rewards: np.ndarray,
     eval_rewards: np.ndarray,
-    greedy_eval_rewards: np.ndarray | None = None,
+    eval_greedy_rewards: np.ndarray | None = None,
     path: str | os.PathLike[str] | None = None,
     show: bool = True,
 ) -> None:
     """Plots the rewards of training and evaluation episodes, with moving averages.
 
-    If ``greedy_eval_rewards`` is not None, also plots those evaluation episodes (orange)
+    If ``eval_greedy_rewards`` is not None, also plots those evaluation episodes (orange)
     on top of the green ones.
     """
     window = 30
@@ -70,10 +92,10 @@ def plot_rewards(
         label='eval moving average (sampling)',
     )
 
-    if greedy_eval_rewards is not None:
+    if eval_greedy_rewards is not None:
         ax.scatter(
-            range(t_len, t_len + len(greedy_eval_rewards)),
-            greedy_eval_rewards,
+            range(t_len, t_len + len(eval_greedy_rewards)),
+            eval_greedy_rewards,
             s=8,
             c='tab:orange',
             alpha=0.5,
@@ -83,12 +105,54 @@ def plot_rewards(
         ax.plot(
             range(
                 t_len + window // 2,
-                t_len + len(greedy_eval_rewards) - window // 2,
+                t_len + len(eval_greedy_rewards) - window // 2,
             ),
-            moving_average(greedy_eval_rewards, window),
+            moving_average(eval_greedy_rewards, window),
             color='darkorange',
             linewidth=2,
             label='eval moving average (greedy)',
+        )
+
+    ax.legend(loc='lower right')
+    ax.set_xlabel('Episode')
+    ax.set_ylabel('Discounted Reward in Episode')
+
+    if path:
+        fig.savefig(path, bbox_inches='tight')
+    if show:
+        plt.show()
+
+
+def plot_training_curves(
+    curves: list[tuple[str, np.ndarray]],
+    scatter: bool = True,
+    path: str | None = None,
+    show: bool = True,
+) -> None:
+    """
+    Plots several training runs together: for each (label, rewards) in curves, the reward of every
+    episode (if scatter is True) and its moving average over 30 episodes.
+    """
+    window = 30
+
+    plt.rc('font', size=12)
+    fig = plt.figure(figsize=(10, 5))
+    ax = fig.add_subplot(1, 1, 1)
+
+    for label, rewards in curves:
+        if scatter:
+            ax.scatter(
+                range(len(rewards)),
+                rewards,
+                s=5,
+                linewidth=0,
+                alpha=0.3,
+            )
+        ax.plot(
+            range(window // 2, len(rewards) - window // 2),
+            moving_average(rewards, window),
+            linewidth=2,
+            label=f'{label} (moving average)',
         )
 
     ax.legend(loc='lower right')

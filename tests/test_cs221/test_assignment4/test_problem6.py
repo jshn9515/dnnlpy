@@ -292,17 +292,17 @@ def make_bootstrapped(
     initial_theta: np.ndarray,
     time_limit: int,
     weight: tuple[float, ...] = (-2.0, 1.0, 0.5, -1.5),
-) -> a4.BootstrappedPolicyGradient:
+) -> a4.ActorCritic:
     """Returns a ``BootstrappedPolicyGradient`` with theta and a fixed V(s). phi(s) on the
     same tiny features, so that a bug in V does not affect the tests.
     """
-    rl = a4.BootstrappedPolicyGradient(
+    rl = a4.ActorCritic(
         feature_dim=4,
         feature_extractor=feature_extractor,
         actions=[0, 1, 2],
         discount=0.9,
         time_limit=time_limit,
-        step_size=0.1,
+        actor_step_size=0.1,
     )
     rl.theta = initial_theta.copy()
     rl.value_function.weight = np.array(weight)

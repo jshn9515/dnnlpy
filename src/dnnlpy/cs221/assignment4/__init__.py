@@ -7,10 +7,11 @@ if importlib.util.find_spec('gymnasium') is None:
     )
 
 from .algorithms import (
-    BootstrappedPolicyGradient as BootstrappedPolicyGradient,
+    ActorCritic as ActorCritic,
     ConstrainedQLearning as ConstrainedQLearning,
     FixedRLAlgorithm as FixedRLAlgorithm,
     FunctionApproxQLearning as FunctionApproxQLearning,
+    LinearValueFunction as LinearValueFunction,
     ModelBasedMonteCarlo as ModelBasedMonteCarlo,
     PolicyGradient as PolicyGradient,
     RandomRLAlgorithm as RandomRLAlgorithm,

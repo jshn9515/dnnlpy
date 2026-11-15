@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import numpy.typing as npt
@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from .mdp import MDP
 
 type Array1D = np.ndarray[tuple[int]]
+type EvalMode = Literal['sample', 'greedy']
 
 __all__ = [
     'fourier_feature_extractor',
@@ -119,6 +120,25 @@ def fourier_feature_extractor(
     return np.cos(np.pi * features)
 
 
+def _get_action[StateT, ActionT](
+    rl: RLAlgorithm[StateT, ActionT],
+    state: StateT,
+    explore: bool,
+    eval_mode: EvalMode = 'sample',
+) -> ActionT | None:
+    """Gets an action from the RL algorithm, handling the case where no feasible action is
+    available.
+    """
+    from .algorithms import PolicyGradient
+
+    if isinstance(rl, PolicyGradient) and eval_mode == 'greedy':
+        action = rl.get_greedy_action(state)
+    else:
+        action = rl.get_action(state, explore=explore)
+
+    return action
+
+
 def _render_mdp[StateT, ActionT](mdp: MDP[StateT, ActionT]) -> None:
     """Renders a Mountain Car MDP environment."""
     from .mdp import MountainCarMDP
@@ -134,6 +154,7 @@ def simulate[StateT, ActionT](
     rl: RLAlgorithm[StateT, ActionT],
     num_episodes: int = 100,
     train: bool = True,
+    eval_mode: EvalMode = 'sample',
     verbose: bool = True,
     demo: bool = False,
 ) -> Array1D:
@@ -150,6 +171,10 @@ def simulate[StateT, ActionT](
         num_episodes (int, optional): The number of episodes to run. Defaults to 100.
         train (bool, optional): Whether to allow the RL algorithm to learn from feedback.
             Defaults to ``True``.
+        eval_mode (EvalMode, optional): The evaluation mode for the RL algorithm. For Policy
+            Gradient agents, this can be either ``sample`` (sample actions from the policy
+            distribution) or ``greedy`` (select the action with the highest probability).
+            Defaults to ``sample``.
         verbose (bool, optional): Whether to print progress information during the simulation.
             Defaults to ``True``.
         demo (bool, optional): Whether to render the MDP environment during the simulation.
@@ -174,7 +199,7 @@ def simulate[StateT, ActionT](
             if demo:
                 time.sleep(0.05)
 
-            action = rl.get_action(state, explore=train)
+            action = _get_action(rl, state, explore=train, eval_mode=eval_mode)
             if action is None:
                 break  # No feasible action is available; end this episode
 
@@ -191,11 +216,15 @@ def simulate[StateT, ActionT](
             if transition.terminated or transition.truncated:
                 break  # The episode has ended
 
-        if verbose and episode % 100 == 0:
-            n = len(str(num_episodes))
+        advantage = getattr(rl, 'advantage', None)
+        advantage = f'{advantage: .4f}' if isinstance(advantage, float) else 'N/A'
+
+        if verbose and (episode % 100 == 0 or episode == num_episodes - 1):
+            n1 = len(str(num_episodes))
+            n2 = len(str(mdp.time_limit))
             logger.info(
-                f'Episode {episode:{n}} | reward: {total_reward:.4f}, '
-                f'length: {episode_length:d}'
+                f'Episode {episode:>{n1}d} | reward: {total_reward: .4f}, '
+                f'length: {episode_length:<{n2}d} | advantage: {advantage}'
             )
 
         total_rewards.append(total_reward)

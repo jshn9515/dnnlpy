@@ -14,7 +14,7 @@ type Array2D = np.ndarray[tuple[int, int]]
 type Array3D = np.ndarray[tuple[int, int, int]]
 
 __all__ = [
-    'BootstrappedPolicyGradient',
+    'ActorCritic',
     'ConstrainedQLearning',
     'FixedRLAlgorithm',
     'FunctionApproxQLearning',
@@ -652,6 +652,18 @@ class FunctionApproxQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         self.weight = self.rng.standard_normal((feature_dim, len(actions)))
         self.num_iters = 0
 
+    def _features(self, state: StateT) -> Array1D:
+        """Extract features and check their dimension against the weight matrix."""
+        phi = self.feature_extractor(state)
+        if phi.shape != (self.feature_dim,):
+            raise RuntimeError(
+                f'Feature extractor returned shape {phi.shape}, but '
+                f'feature_dim={self.feature_dim} requires shape ({self.feature_dim},). '
+                'Check `feature_dim` and the extractor parameters; for 2D Fourier '
+                'features, the length is (max_coeff + 1) ** 2.'
+            )
+        return phi
+
     def get_single_q(self, state: StateT, action: ActionT) -> float:
         r"""Estimate the Q-value for a state-action pair.
 
@@ -671,7 +683,7 @@ class FunctionApproxQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         Returns:
             float: The estimated Q-value.
         """
-        phi = self.feature_extractor(state)
+        phi = self._features(state)
         idx = self.actions.index(action)
         q_value = np.dot(phi, self.weight[:, idx])
         return float(q_value)
@@ -694,7 +706,7 @@ class FunctionApproxQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         Returns:
             np.ndarray: An array of estimated Q-values for each action.
         """
-        phi = self.feature_extractor(state)
+        phi = self._features(state)
         q_values = phi @ self.weight
         return q_values
 
@@ -766,7 +778,7 @@ class FunctionApproxQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         """
         T = transition
         a = self.actions.index(T.action)
-        phi = self.feature_extractor(T.state)
+        phi = self._features(T.state)
         old_values = self.get_vector_q(T.state)
 
         if transition.terminated:
@@ -861,6 +873,31 @@ class ConstrainedQLearning(FunctionApproxQLearning[np.ndarray, int]):
         self.gravity = gravity
         self.max_speed = max_speed
 
+    def get_valid_actions(self, state: Array1D) -> list[int]:
+        """Get the list of valid actions for the given state based on predicted next velocity.
+
+        Args:
+            state (np.ndarray): Current state containing position and velocity, with shape
+                ``(2,)``.
+
+        Returns:
+            list[int]: A list of valid actions that satisfy the velocity constraint.
+        """
+        position, velocity = map(float, state)
+        valid_actions = []
+
+        for action in self.actions:
+            next_velocity = (
+                velocity
+                + (action - 1) * self.force
+                - math.cos(3 * position) * self.gravity
+            )
+
+            if self.max_speed is None or abs(next_velocity) < self.max_speed:
+                valid_actions.append(action)
+
+        return valid_actions
+
     @override
     def get_action(self, state: Array1D, explore: bool = True) -> int | None:
         r"""Select an action using an epsilon-greedy policy with velocity constraints.
@@ -901,19 +938,7 @@ class ConstrainedQLearning(FunctionApproxQLearning[np.ndarray, int]):
         else:  # >1e5
             epsilon = self.epsilon / math.log(self.num_iters - 1e5 + 1)  # decay
 
-        position, velocity = map(float, state)
-        valid_actions: list[int] = []
-
-        for action in self.actions:
-            next_velocity = (
-                velocity
-                + (action - 1) * self.force
-                - math.cos(3 * position) * self.gravity
-            )
-
-            if self.max_speed is None or abs(next_velocity) < self.max_speed:
-                valid_actions.append(action)
-
+        valid_actions = self.get_valid_actions(state)
         if not valid_actions:
             return None
 
@@ -923,6 +948,34 @@ class ConstrainedQLearning(FunctionApproxQLearning[np.ndarray, int]):
             return max(
                 valid_actions, key=lambda action: self.get_single_q(state, action)
             )
+
+    @override
+    def step(self, transition: MDPTransition[np.ndarray, int]) -> None:
+        """Update the action-specific weights using an observed transition with velocity
+        constraints.
+
+        Args:
+            transition (MDPTransition): A tuple containing the current step's transition
+                information: state, action, reward, next_state, and termination/truncation
+                flags.
+        """
+        T = transition
+        a = self.actions.index(T.action)
+        phi = self._features(T.state)
+        old_q = self.get_single_q(T.state, T.action)
+
+        if T.terminated:
+            target = T.reward
+        else:
+            if valid_actions := self.get_valid_actions(T.next_state):
+                next_q = max(
+                    self.get_single_q(T.next_state, action) for action in valid_actions
+                )
+                target = T.reward + self.discount * next_q
+            else:
+                target = T.reward
+
+        self.weight[:, a] += self.step_size * (target - old_q) * phi
 
 
 class LinearValueFunction[StateT]:
@@ -1174,13 +1227,17 @@ class PolicyGradient[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         # out acting uniformly at random.
         self.theta = np.zeros((feature_dim, len(actions)))
 
-        # self.baseline: a running average of the utilities of past rollouts.
+        # A running average of the utilities of past rollouts.
         # None until the first rollout ends.
         self.baseline: float | None = None
 
         # The current rollout: a `(state, action, reward, next_state, terminal)`
         # tuple for each step.
         self.rollout: list[MDPTransition[StateT, ActionT]] = []
+
+        # The advantage estimate for the current rollout.
+        # None until the first rollout ends.
+        self.advantage: float | None = None
 
     def get_action_probs(self, state: StateT) -> Array1D:
         r"""Compute action probabilities using softmax policy.
@@ -1218,6 +1275,21 @@ class PolicyGradient[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         probs = self.get_action_probs(state)
         actions = np.array(self.actions)
         return self.rng.choice(actions, p=probs)
+
+    get_random_action = get_action
+
+    def get_greedy_action(self, state: StateT, explore: bool = False) -> ActionT:
+        r"""Select the action with the highest probability under the current policy.
+
+        Args:
+            state (StateT): The current environment state.
+            explore (bool, optional): Unused. Defaults to ``False``.
+
+        Returns:
+            ActionT: The action with the highest probability under :math:`\pi_\theta(a \mid s)`.
+        """
+        probs = self.get_action_probs(state)
+        return self.actions[np.argmax(probs)]
 
     def log_prob_gradient(self, state: StateT, action: ActionT) -> Array2D:
         r"""Compute the gradient of :math:`\log\pi_\theta(a \mid s)`.
@@ -1305,16 +1377,19 @@ class PolicyGradient[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         if self.baseline is None:
             self.baseline = U
 
-        # 3. Compute the policy gradient
+        # 3. Compute advantage using the old baseline
+        self.advantage = U - self.baseline
+
+        # 4. Compute the policy gradient
         gradient = np.zeros_like(self.theta)
         for T in self.rollout:
             log_grad = self.log_prob_gradient(T.state, T.action)
             gradient += (U - self.baseline) * log_grad
 
-        # 4. Update policy parameters
+        # 5. Update policy parameters
         self.theta += self.step_size * gradient
 
-        # 5. Update baseline
+        # 6. Update baseline
         self.baseline += self.baseline_step_size * (U - self.baseline)
 
     @override
@@ -1347,7 +1422,7 @@ class PolicyGradient[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
 
 
 # Problem 6f: Bootstrapped Policy Gradient
-class BootstrappedPolicyGradient[StateT, ActionT](PolicyGradient[StateT, ActionT]):
+class ActorCritic[StateT, ActionT](PolicyGradient[StateT, ActionT]):
     r"""Rollout-based actor-critic with bootstrapped TD(0) advantages.
 
     This agent extends :class:`PolicyGradient` by introducing a learned state-value
@@ -1397,8 +1472,10 @@ class BootstrappedPolicyGradient[StateT, ActionT](PolicyGradient[StateT, ActionT
         actions (list[ActionT]): List of available actions.
         discount (float, optional): Discount factor :math:`\gamma` for future rewards.
             Defaults to 0.9.
-        step_size (float, optional): Learning rate for updating policy weights. Defaults
+        actor_step_size (float, optional): Learning rate for updating policy weights. Defaults
             to 1e-5.
+        critic_step_size (float, optional): Learning rate for the value function. Defaults
+            to 0.01.
         baseline_step_size (float, optional): Learning rate for updating the baseline.
             Defaults to 0.1.
         time_limit (int, optional): Maximum number of steps per episode. Defaults to 1000.
@@ -1411,18 +1488,19 @@ class BootstrappedPolicyGradient[StateT, ActionT](PolicyGradient[StateT, ActionT
         feature_extractor: Callable[[StateT], Array1D],
         actions: list[ActionT],
         discount: float = 0.9,
-        step_size: float = 1e-5,
+        actor_step_size: float = 1e-5,
+        critic_step_size: float = 0.01,
         baseline_step_size: float = 0.1,
         time_limit: int = 1000,
         seed: int | None = None,
     ) -> None:
-        """Initialize the ``BootstrappedPolicyGradient`` agent with the specified parameters."""
+        """Initialize the ``ActorCritic`` agent with the specified parameters."""
         super().__init__(
             feature_dim,
             feature_extractor,
             actions,
             discount=discount,
-            step_size=step_size,
+            step_size=actor_step_size,
             baseline_step_size=baseline_step_size,
             time_limit=time_limit,
             seed=seed,
@@ -1430,7 +1508,7 @@ class BootstrappedPolicyGradient[StateT, ActionT](PolicyGradient[StateT, ActionT
         self.value_function = LinearValueFunction(
             feature_dim,
             feature_extractor,
-            step_size=step_size,
+            step_size=critic_step_size,
             discount=discount,
         )
 
@@ -1462,6 +1540,7 @@ class BootstrappedPolicyGradient[StateT, ActionT](PolicyGradient[StateT, ActionT
         The critic remains fixed during this update and is trained separately using
         semi-gradient TD(0) after the actor update.
         """
+        advantages: list[float] = []
         gradient = np.zeros_like(self.theta)
 
         for T in self.rollout:
@@ -1475,8 +1554,10 @@ class BootstrappedPolicyGradient[StateT, ActionT](PolicyGradient[StateT, ActionT
                 + self.discount * next_value
                 - self.value_function.get_v(T.state)
             )
+            advantages.append(advantage)
             gradient += advantage * self.log_prob_gradient(T.state, T.action)
 
+        self.advantage = float(np.mean(advantages))
         self.theta += self.step_size * gradient
 
     @override
