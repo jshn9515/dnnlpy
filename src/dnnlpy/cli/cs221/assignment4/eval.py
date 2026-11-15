@@ -284,7 +284,15 @@ def eval_policy_gradient_agent(args: argparse.Namespace) -> None:
     logger.info('Loaded pre-trained weights from NumPy file.')
 
     try:
-        a4.simulate(mdp, rl, num_episodes=1, train=False, verbose=False, demo=True)
+        a4.simulate(
+            mdp,
+            rl,
+            num_episodes=1,
+            train=False,
+            eval_mode=args.eval_mode,
+            verbose=False,
+            demo=True,
+        )
     finally:
         mdp.close()
 
@@ -332,7 +340,15 @@ def eval_actor_critic_agent(args: argparse.Namespace) -> None:
     logger.info('Loaded pre-trained weights from NumPy file.')
 
     try:
-        a4.simulate(mdp, rl, num_episodes=1, train=False, verbose=False, demo=True)
+        a4.simulate(
+            mdp,
+            rl,
+            num_episodes=1,
+            train=False,
+            eval_mode=args.eval_mode,
+            verbose=False,
+            demo=True,
+        )
     finally:
         mdp.close()
 
@@ -377,6 +393,14 @@ def main() -> None:
         type=float,
         default=0.07,
         help='Velocity limit for function approximation and constrained Q-learning.',
+    )
+    parser.add_argument(
+        '--eval-mode',
+        choices=['sample', 'greedy'],
+        default='sample',
+        help='Evaluation mode for Policy Gradient / Actor-Critic agents only: '
+        '`sample` samples actions from the policy distribution, '
+        'while `greedy` selects the action with the highest probability.',
     )
     parser.add_argument(
         '--trial',
