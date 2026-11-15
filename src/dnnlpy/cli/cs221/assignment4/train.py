@@ -42,8 +42,9 @@ def train_value_iteration(args: argparse.Namespace) -> None:
     logger.info('Starting training for value-iteration agent.')
 
     for i in range(args.num_trials):
+        trial_seed = None if args.seed is None else args.seed + i
         mdp = a4.DiscreteMountainCarMDP(
-            a4.CustomMountainCarEnv(max_speed=args.max_speed, seed=args.seed),
+            a4.CustomMountainCarEnv(max_speed=args.max_speed, seed=trial_seed),
             bins=20,
             discount=args.discount,
             time_limit=args.time_limit,
@@ -53,7 +54,7 @@ def train_value_iteration(args: argparse.Namespace) -> None:
             discount=mdp.discount,
             num_states=mdp.num_states,
             epsilon=0.5,
-            seed=args.seed,
+            seed=trial_seed,
         )
 
         try:
@@ -97,8 +98,9 @@ def train_tabular_q_learning(args: argparse.Namespace) -> None:
     logger.info('Starting training for tabular Q-learning agent.')
 
     for i in range(args.num_trials):
+        trial_seed = None if args.seed is None else args.seed + i
         mdp = a4.DiscreteMountainCarMDP(
-            a4.CustomMountainCarEnv(max_speed=args.max_speed, seed=args.seed),
+            a4.CustomMountainCarEnv(max_speed=args.max_speed, seed=trial_seed),
             bins=20,
             discount=args.discount,
             time_limit=args.time_limit,
@@ -108,7 +110,7 @@ def train_tabular_q_learning(args: argparse.Namespace) -> None:
             discount=mdp.discount,
             num_states=mdp.num_states,
             epsilon=0.15,
-            seed=args.seed,
+            seed=trial_seed,
         )
 
         try:
@@ -147,8 +149,9 @@ def train_function_approx_q_learning(args: argparse.Namespace) -> None:
     logger.info('Starting training for function approximation Q-learning agent.')
 
     for i in range(args.num_trials):
+        trial_seed = None if args.seed is None else args.seed + i
         mdp = a4.ContinuousMountainCarMDP(
-            a4.CustomMountainCarEnv(max_speed=args.max_speed, seed=args.seed),
+            a4.CustomMountainCarEnv(max_speed=args.max_speed, seed=trial_seed),
             discount=args.discount,
             time_limit=args.time_limit,
         )
@@ -164,7 +167,7 @@ def train_function_approx_q_learning(args: argparse.Namespace) -> None:
             actions=mdp.actions,
             discount=mdp.discount,
             epsilon=0.2,
-            seed=args.seed,
+            seed=trial_seed,
         )
 
         try:
@@ -207,8 +210,9 @@ def train_constrained_q_learning(args: argparse.Namespace) -> None:
     logger.info('Starting training for constrained Q-learning agent.')
 
     for i in range(args.num_trials):
+        trial_seed = None if args.seed is None else args.seed + i
         mdp = a4.ContinuousMountainCarMDP(
-            a4.CustomMountainCarEnv(max_speed=args.max_speed, seed=args.seed),
+            a4.CustomMountainCarEnv(max_speed=args.max_speed, seed=trial_seed),
             discount=args.discount,
             time_limit=args.time_limit,
         )
@@ -225,7 +229,7 @@ def train_constrained_q_learning(args: argparse.Namespace) -> None:
             discount=mdp.discount,
             epsilon=0.2,
             max_speed=args.max_speed,
-            seed=args.seed,
+            seed=trial_seed,
         )
 
         try:
@@ -266,8 +270,9 @@ def train_policy_gradient(args: argparse.Namespace) -> None:
     logger.info('Starting training for policy gradient agent.')
 
     for i in range(args.num_trials):
+        trial_seed = None if args.seed is None else args.seed + i
         mdp = a4.ContinuousMountainCarMDP(
-            a4.CustomMountainCarEnv(max_speed=args.max_speed, seed=args.seed),
+            a4.CustomMountainCarEnv(max_speed=args.max_speed, seed=trial_seed),
             discount=args.discount,
             time_limit=args.time_limit,
         )
@@ -282,7 +287,7 @@ def train_policy_gradient(args: argparse.Namespace) -> None:
             feature_extractor=feature_extractor,
             actions=mdp.actions,
             discount=mdp.discount,
-            seed=args.seed,
+            seed=trial_seed,
         )
 
         try:
@@ -348,8 +353,9 @@ def train_actor_critic(args: argparse.Namespace) -> None:
     logger.info('Starting training for actor-critic agent.')
 
     for i in range(args.num_trials):
+        trial_seed = None if args.seed is None else args.seed + i
         mdp = a4.ContinuousMountainCarMDP(
-            a4.CustomMountainCarEnv(max_speed=args.max_speed, seed=args.seed),
+            a4.CustomMountainCarEnv(max_speed=args.max_speed, seed=trial_seed),
             discount=args.discount,
             time_limit=args.time_limit,
         )
@@ -364,7 +370,7 @@ def train_actor_critic(args: argparse.Namespace) -> None:
             feature_extractor=feature_extractor,
             actions=mdp.actions,
             discount=mdp.discount,
-            seed=args.seed,
+            seed=trial_seed,
         )
 
         try:
@@ -430,6 +436,7 @@ def train_all_agents(args: argparse.Namespace) -> None:
     logger.info('Training six agents from the same seed to perform MountainCar task.')
 
     for i in range(args.num_trials):
+        trial_seed = None if args.seed is None else args.seed + i
         logger.info(f'Starting training for trial {i} of all agents.')
 
         curves: list[tuple[str, np.ndarray]] = []
@@ -448,7 +455,7 @@ def train_all_agents(args: argparse.Namespace) -> None:
                     mdp = a4.DiscreteMountainCarMDP(
                         a4.CustomMountainCarEnv(
                             max_speed=args.max_speed,
-                            seed=args.seed,
+                            seed=trial_seed,
                         ),
                         bins=20,
                         discount=args.discount,
@@ -459,14 +466,14 @@ def train_all_agents(args: argparse.Namespace) -> None:
                         discount=mdp.discount,
                         num_states=mdp.num_states,
                         epsilon=0.5,
-                        seed=args.seed,
+                        seed=trial_seed,
                     )
 
                 case 'tabular':
                     mdp = a4.DiscreteMountainCarMDP(
                         a4.CustomMountainCarEnv(
                             max_speed=args.max_speed,
-                            seed=args.seed,
+                            seed=trial_seed,
                         ),
                         bins=20,
                         discount=args.discount,
@@ -477,14 +484,14 @@ def train_all_agents(args: argparse.Namespace) -> None:
                         discount=mdp.discount,
                         num_states=mdp.num_states,
                         epsilon=0.15,
-                        seed=args.seed,
+                        seed=trial_seed,
                     )
 
                 case 'function-approx':
                     mdp = a4.ContinuousMountainCarMDP(
                         a4.CustomMountainCarEnv(
                             max_speed=args.max_speed,
-                            seed=args.seed,
+                            seed=trial_seed,
                         ),
                         discount=args.discount,
                         time_limit=args.time_limit,
@@ -501,14 +508,14 @@ def train_all_agents(args: argparse.Namespace) -> None:
                         actions=mdp.actions,
                         discount=mdp.discount,
                         epsilon=0.2,
-                        seed=args.seed,
+                        seed=trial_seed,
                     )
 
                 case 'constrained':
                     mdp = a4.ContinuousMountainCarMDP(
                         a4.CustomMountainCarEnv(
                             max_speed=args.max_speed,
-                            seed=args.seed,
+                            seed=trial_seed,
                         ),
                         discount=args.discount,
                         time_limit=args.time_limit,
@@ -526,14 +533,14 @@ def train_all_agents(args: argparse.Namespace) -> None:
                         discount=mdp.discount,
                         epsilon=0.2,
                         max_speed=args.max_speed,
-                        seed=args.seed,
+                        seed=trial_seed,
                     )
 
                 case 'policy-gradient':
                     mdp = a4.ContinuousMountainCarMDP(
                         a4.CustomMountainCarEnv(
                             max_speed=args.max_speed,
-                            seed=args.seed,
+                            seed=trial_seed,
                         ),
                         discount=args.discount,
                         time_limit=args.time_limit,
@@ -551,14 +558,14 @@ def train_all_agents(args: argparse.Namespace) -> None:
                         feature_extractor=feature_extractor,
                         actions=mdp.actions,
                         discount=mdp.discount,
-                        seed=args.seed,
+                        seed=trial_seed,
                     )
 
                 case 'actor-critic':
                     mdp = a4.ContinuousMountainCarMDP(
                         a4.CustomMountainCarEnv(
                             max_speed=args.max_speed,
-                            seed=args.seed,
+                            seed=trial_seed,
                         ),
                         discount=args.discount,
                         time_limit=args.time_limit,
@@ -576,7 +583,7 @@ def train_all_agents(args: argparse.Namespace) -> None:
                         feature_extractor=feature_extractor,
                         actions=mdp.actions,
                         discount=mdp.discount,
-                        seed=args.seed,
+                        seed=trial_seed,
                     )
 
                 case _:

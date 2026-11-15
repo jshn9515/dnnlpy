@@ -1,7 +1,9 @@
 import json
 import sys
+from contextlib import ExitStack
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import numpy as np
 import numpy.testing as npt
@@ -9,6 +11,110 @@ import pytest
 
 import dnnlpy.cs221.assignment4 as a4
 from dnnlpy.cli.cs221.assignment4 import evaluate, train
+
+
+@pytest.mark.parametrize(
+    ('agent', 'agent_class'),
+    [
+        ('value-iteration', 'ModelBasedMonteCarlo'),
+        ('tabular', 'TabularQLearning'),
+        ('function-approx', 'FunctionApproxQLearning'),
+        ('constrained', 'ConstrainedQLearning'),
+        ('policy-gradient', 'PolicyGradient'),
+        ('actor-critic', 'ActorCritic'),
+    ],
+)
+def test_train_cli_uses_distinct_trial_seeds(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    agent: str,
+    agent_class: str,
+):
+    monkeypatch.setattr(
+        a4,
+        'simulate',
+        lambda mdp, rl, num_episodes, **kwargs: np.zeros(num_episodes),
+    )
+    monkeypatch.setattr(train, 'plot_rewards', lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        sys,
+        'argv',
+        [
+            'dnnlpy-cs221-a4-train',
+            '--agent',
+            agent,
+            '--num-trials',
+            '2',
+            '--num-train-episodes',
+            '1',
+            '--num-eval-episodes',
+            '1',
+            '--seed',
+            '11',
+            '--path',
+            str(tmp_path),
+        ],
+    )
+
+    with (
+        patch.object(a4, 'CustomMountainCarEnv', wraps=a4.CustomMountainCarEnv) as env,
+        patch.object(a4, agent_class, wraps=getattr(a4, agent_class)) as rl,
+    ):
+        train.main()
+
+    assert [call.kwargs['seed'] for call in env.call_args_list] == [11, 12]
+    assert [call.kwargs['seed'] for call in rl.call_args_list] == [11, 12]
+
+
+def test_train_cli_all_agents_share_seed_per_trial(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    monkeypatch.setattr(
+        a4,
+        'simulate',
+        lambda mdp, rl, num_episodes, **kwargs: np.zeros(num_episodes),
+    )
+    monkeypatch.setattr(train, 'plot_training_curves', lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        sys,
+        'argv',
+        [
+            'dnnlpy-cs221-a4-train',
+            '--agent',
+            'all',
+            '--num-trials',
+            '2',
+            '--num-train-episodes',
+            '1',
+            '--seed',
+            '11',
+            '--path',
+            str(tmp_path),
+        ],
+    )
+
+    agent_classes = [
+        'ModelBasedMonteCarlo',
+        'TabularQLearning',
+        'FunctionApproxQLearning',
+        'ConstrainedQLearning',
+        'PolicyGradient',
+        'ActorCritic',
+    ]
+    with ExitStack() as stack:
+        env = stack.enter_context(
+            patch.object(a4, 'CustomMountainCarEnv', wraps=a4.CustomMountainCarEnv)
+        )
+        agents = [
+            stack.enter_context(patch.object(a4, name, wraps=getattr(a4, name)))
+            for name in agent_classes
+        ]
+        train.main()
+
+    seed1 = [call.kwargs['seed'] for call in env.call_args_list]
+    seed2 = [call.kwargs['seed'] for agent in agents for call in agent.call_args_list]
+    assert seed1 == [11] * 6 + [12] * 6
+    assert seed2 == [11, 12] * 6
 
 
 @pytest.mark.parametrize(
