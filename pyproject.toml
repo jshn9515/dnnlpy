@@ -55,6 +55,7 @@ Documentation = "https://jshn9515.github.io/dnnlpy/"
 
 [project.scripts]
 dnnlpy-cs221-a4-train = "dnnlpy.cli.cs221.assignment4.train:main"
+dnnlpy-cs221-a4-eval = "dnnlpy.cli.cs221.assignment4.evaluate:main"
 
 [tool.uv]
 torch-backend = "cpu"
