@@ -57,7 +57,7 @@ def plot_rewards(
     e_len = len(eval_rewards)
 
     plt.rc('font', size=12)
-    fig = plt.figure(figsize=(12, 8))
+    fig = plt.figure(figsize=(12.8, 7.2))
     ax = fig.add_subplot(1, 1, 1)
     ax.scatter(
         range(t_len),
@@ -118,7 +118,7 @@ def plot_rewards(
     ax.set_ylabel('Discounted Reward in Episode')
 
     if path:
-        fig.savefig(path, bbox_inches='tight')
+        fig.savefig(path, dpi=300)
     if show:
         plt.show()
 
@@ -136,7 +136,7 @@ def plot_training_curves(
     window = 30
 
     plt.rc('font', size=12)
-    fig = plt.figure(figsize=(10, 5))
+    fig = plt.figure(figsize=(12.8, 7.2))
     ax = fig.add_subplot(1, 1, 1)
 
     for label, rewards in curves:
@@ -160,6 +160,6 @@ def plot_training_curves(
     ax.set_ylabel('Discounted Reward in Episode')
 
     if path is not None:
-        fig.savefig(path, bbox_inches='tight')
+        fig.savefig(path, dpi=300)
     if show:
         plt.show()
