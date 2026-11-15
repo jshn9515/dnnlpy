@@ -223,7 +223,7 @@ def simulate[StateT, ActionT](
             n1 = len(str(num_episodes))
             n2 = len(str(mdp.time_limit))
             logger.info(
-                f'Episode {episode:>{n1}d} | reward: {total_reward:8.4f}, '
+                f'Episode {episode:>{n1}d} | reward: {total_reward:9.4f}, '
                 f'length: {episode_length:<{n2}d} | advantage: {advantage}'
             )
 
