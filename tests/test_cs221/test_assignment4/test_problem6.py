@@ -302,7 +302,7 @@ def make_bootstrapped(
         actions=[0, 1, 2],
         discount=0.9,
         time_limit=time_limit,
-        step_size=0.1,
+        actor_step_size=0.1,
     )
     rl.theta = initial_theta.copy()
     rl.value_function.weight = np.array(weight)

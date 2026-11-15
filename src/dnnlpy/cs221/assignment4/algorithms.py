@@ -1472,8 +1472,10 @@ class ActorCritic[StateT, ActionT](PolicyGradient[StateT, ActionT]):
         actions (list[ActionT]): List of available actions.
         discount (float, optional): Discount factor :math:`\gamma` for future rewards.
             Defaults to 0.9.
-        step_size (float, optional): Learning rate for updating policy weights. Defaults
+        actor_step_size (float, optional): Learning rate for updating policy weights. Defaults
             to 1e-5.
+        critic_step_size (float, optional): Learning rate for the value function. Defaults
+            to 0.01.
         baseline_step_size (float, optional): Learning rate for updating the baseline.
             Defaults to 0.1.
         time_limit (int, optional): Maximum number of steps per episode. Defaults to 1000.
@@ -1486,7 +1488,8 @@ class ActorCritic[StateT, ActionT](PolicyGradient[StateT, ActionT]):
         feature_extractor: Callable[[StateT], Array1D],
         actions: list[ActionT],
         discount: float = 0.9,
-        step_size: float = 1e-5,
+        actor_step_size: float = 1e-5,
+        critic_step_size: float = 0.01,
         baseline_step_size: float = 0.1,
         time_limit: int = 1000,
         seed: int | None = None,
@@ -1497,7 +1500,7 @@ class ActorCritic[StateT, ActionT](PolicyGradient[StateT, ActionT]):
             feature_extractor,
             actions,
             discount=discount,
-            step_size=step_size,
+            step_size=actor_step_size,
             baseline_step_size=baseline_step_size,
             time_limit=time_limit,
             seed=seed,
@@ -1505,7 +1508,7 @@ class ActorCritic[StateT, ActionT](PolicyGradient[StateT, ActionT]):
         self.value_function = LinearValueFunction(
             feature_dim,
             feature_extractor,
-            step_size=step_size,
+            step_size=critic_step_size,
             discount=discount,
         )
 
