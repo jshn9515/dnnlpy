@@ -14,7 +14,7 @@ type Array2D = np.ndarray[tuple[int, int]]
 type Array3D = np.ndarray[tuple[int, int, int]]
 
 __all__ = [
-    'BootstrappedPolicyGradient',
+    'ActorCritic',
     'ConstrainedQLearning',
     'FixedRLAlgorithm',
     'FunctionApproxQLearning',
@@ -1347,7 +1347,7 @@ class PolicyGradient[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
 
 
 # Problem 6f: Bootstrapped Policy Gradient
-class BootstrappedPolicyGradient[StateT, ActionT](PolicyGradient[StateT, ActionT]):
+class ActorCritic[StateT, ActionT](PolicyGradient[StateT, ActionT]):
     r"""Rollout-based actor-critic with bootstrapped TD(0) advantages.
 
     This agent extends :class:`PolicyGradient` by introducing a learned state-value
@@ -1416,7 +1416,7 @@ class BootstrappedPolicyGradient[StateT, ActionT](PolicyGradient[StateT, ActionT
         time_limit: int = 1000,
         seed: int | None = None,
     ) -> None:
-        """Initialize the ``BootstrappedPolicyGradient`` agent with the specified parameters."""
+        """Initialize the ``ActorCritic`` agent with the specified parameters."""
         super().__init__(
             feature_dim,
             feature_extractor,
