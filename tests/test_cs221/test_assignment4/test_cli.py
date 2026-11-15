@@ -10,7 +10,7 @@ import numpy.testing as npt
 import pytest
 
 import dnnlpy.cs221.assignment4 as a4
-from dnnlpy.cli.cs221.assignment4 import evaluate, train
+from dnnlpy.cli.cs221.assignment4 import eval, train
 
 
 @pytest.mark.parametrize(
@@ -244,7 +244,7 @@ def test_eval_cli_loads_trained_results(
             str(tmp_path),
         ],
     )
-    evaluate.main()
+    eval.main()
 
     assert len(calls) == 1
     _, rl, num_episodes, kwargs = calls[0]
@@ -284,7 +284,7 @@ def test_eval_cli_naive_agent(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
             str(tmp_path),
         ],
     )
-    evaluate.main()
+    eval.main()
 
     assert len(calls) == 1
     rl, num_episodes, kwargs = calls[0]
