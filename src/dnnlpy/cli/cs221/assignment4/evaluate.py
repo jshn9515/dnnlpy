@@ -85,6 +85,7 @@ def eval_value_iteration_agent(args: argparse.Namespace) -> None:
             f'The file `vi_trial_{args.trial}_weights.json` does not exist. '
             f'Please run the training script first.'
         )
+        mdp.close()
         return
 
     with open(path) as fp:
@@ -131,6 +132,7 @@ def eval_tabular_q_learning_agent(args: argparse.Namespace) -> None:
             f'The file `tabular_trial_{args.trial}_weights.npy` does not exist. '
             f'Please run the training script first.'
         )
+        mdp.close()
         return
 
     rl.Q = np.load(path)
@@ -178,6 +180,7 @@ def eval_function_approx_q_learning_agent(args: argparse.Namespace) -> None:
             f'The file `function_approx_trial_{args.trial}_weights.npy` does not exist. '
             f'Please run the training script first.'
         )
+        mdp.close()
         return
 
     rl.weight = np.load(path)
@@ -226,6 +229,7 @@ def eval_constrained_q_learning_agent(args: argparse.Namespace) -> None:
             f'The file `constrained_trial_{args.trial}_weights.npy` does not exist. '
             f'Please run the training script first.'
         )
+        mdp.close()
         return
 
     rl.weight = np.load(path)
@@ -273,6 +277,7 @@ def eval_policy_gradient_agent(args: argparse.Namespace) -> None:
             f'The file `policy_gradient_trial_{args.trial}_weights.npy` does not exist. '
             f'Please run the training script first.'
         )
+        mdp.close()
         return
 
     rl.theta = np.load(path)
@@ -320,6 +325,7 @@ def eval_actor_critic_agent(args: argparse.Namespace) -> None:
             f'The file `actor_critic_trial_{args.trial}_weights.npy` does not exist. '
             f'Please run the training script first.'
         )
+        mdp.close()
         return
 
     rl.theta = np.load(path)
