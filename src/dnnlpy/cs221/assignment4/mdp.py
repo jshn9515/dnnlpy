@@ -65,7 +65,7 @@ class MDP[StateT, ActionT](ABC):
         """Returns the number of states in the environment."""
 
     @abstractmethod
-    def reset(self) -> StateT:
+    def reset(self, seed: int | None = None) -> StateT:
         """Resets the MDP to its initial state."""
 
     @abstractmethod
