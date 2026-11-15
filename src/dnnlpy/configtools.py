@@ -1,9 +1,9 @@
-__lazy_modules__ = ['torch', 'torch.accelerator']
-
 import os
 import sys
 from functools import cache
 from pathlib import Path
+
+__lazy_modules__ = ['torch', 'torch.accelerator']
 
 import platformdirs as pdi
 import torch
