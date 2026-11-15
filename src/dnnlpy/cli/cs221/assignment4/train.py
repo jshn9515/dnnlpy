@@ -602,7 +602,7 @@ def train_all_agents(args: argparse.Namespace) -> None:
             path=args.path / f'training_curves_trial_{i}.svg',
             show=args.show_plot,
         )
-        logger.info(f'Saved training curve for trial {i} of agent: {name}.')
+        logger.info(f'Saved training curve for trial {i}.')
 
 
 def main() -> None:
