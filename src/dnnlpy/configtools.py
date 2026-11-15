@@ -104,7 +104,7 @@ def get_experiment_path() -> Path:
     The ``DNNL_EXPERIMENT_ROOT`` environment variable overrides the default
     ``~/dnnlpy/experiments`` location.
     """
-    default_root = pdi.user_data_path('dnnlpy', appauthor=False) / 'experiments'
+    default_root = pdi.user_documents_path() / 'dnnlpy' / 'experiments'
     root = Path(os.getenv('DNNL_EXPERIMENT_ROOT', default_root))
     root.mkdir(parents=True, exist_ok=True)
     return root
