@@ -89,11 +89,11 @@ def train_value_iteration(args: argparse.Namespace) -> None:
             if action != -1
         }
 
-        with open(args.path / f'vi_trial_{i}_weights.json', 'w') as fp:
+        with open(args.path / f'value_iteration_trial_{i}_weights.json', 'w') as fp:
             json.dump(results, fp, indent=2, sort_keys=True)
         logger.info(f'Saved weights for trial {i} of value-iteration agent.')
 
-        path = args.path / f'vi_trial_{i}.png'
+        path = args.path / f'value_iteration_trial_{i}.png'
         plot_rewards(train_rewards, eval_rewards, path=path, show=args.show_plot)
 
 

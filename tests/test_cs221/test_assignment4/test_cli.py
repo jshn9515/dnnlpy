@@ -120,7 +120,7 @@ def test_train_cli_all_agents_share_seed_per_trial(
 @pytest.mark.parametrize(
     ('agent', 'filename'),
     [
-        ('value-iteration', 'vi_trial_0_weights.json'),
+        ('value-iteration', 'value_iteration_trial_0_weights.json'),
         ('tabular', 'tabular_trial_0_weights.npy'),
         ('function-approx', 'function_approx_trial_0_weights.npy'),
         ('constrained', 'constrained_trial_0_weights.npy'),
@@ -182,7 +182,7 @@ def test_train_cli_saves_results(
 @pytest.mark.parametrize(
     ('agent', 'filename', 'attribute'),
     [
-        ('value-iteration', 'vi_trial_0_weights.json', 'pi_indices'),
+        ('value-iteration', 'value_iteration_trial_0_weights.json', 'pi_indices'),
         ('tabular', 'tabular_trial_0_weights.npy', 'Q'),
         ('function-approx', 'function_approx_trial_0_weights.npy', 'weight'),
         ('constrained', 'constrained_trial_0_weights.npy', 'weight'),

@@ -79,10 +79,10 @@ def eval_value_iteration_agent(args: argparse.Namespace) -> None:
     )
 
     # Load the pre-trained policy from a JSON file.
-    path = args.path / f'vi_trial_{args.trial}_weights.json'
+    path = args.path / f'value_iteration_trial_{args.trial}_weights.json'
     if not path.exists():
         logger.error(
-            f'The file `vi_trial_{args.trial}_weights.json` does not exist. '
+            f'The file `value_iteration_trial_{args.trial}_weights.json` does not exist. '
             f'Please run the training script first.'
         )
         mdp.close()
