@@ -74,7 +74,6 @@ def get_default_device() -> torch.device:
         return torch.device('cpu')
 
 
-@cache
 def get_data_path() -> Path:
     """Return the dataset root directory, creating it when necessary.
 
@@ -87,7 +86,6 @@ def get_data_path() -> Path:
     return root
 
 
-@cache
 def get_data_dir() -> str:
     """Return the dataset root directory, creating it when necessary.
 
@@ -99,7 +97,6 @@ def get_data_dir() -> str:
     return root.as_posix()
 
 
-@cache
 def get_experiment_path() -> Path:
     """Return the experiment root directory, creating it when necessary.
 
@@ -113,7 +110,6 @@ def get_experiment_path() -> Path:
     return root
 
 
-@cache
 def get_experiment_dir() -> str:
     """Return the experiment root directory, creating it when necessary.
 
