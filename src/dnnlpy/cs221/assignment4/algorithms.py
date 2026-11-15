@@ -652,6 +652,18 @@ class FunctionApproxQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         self.weight = self.rng.standard_normal((feature_dim, len(actions)))
         self.num_iters = 0
 
+    def _features(self, state: StateT) -> Array1D:
+        """Extract features and check their dimension against the weight matrix."""
+        phi = self.feature_extractor(state)
+        if phi.shape != (self.feature_dim,):
+            raise RuntimeError(
+                f'Feature extractor returned shape {phi.shape}, but '
+                f'feature_dim={self.feature_dim} requires shape ({self.feature_dim},). '
+                'Check `feature_dim` and the extractor parameters; for 2D Fourier '
+                'features, the length is (max_coeff + 1) ** 2.'
+            )
+        return phi
+
     def get_single_q(self, state: StateT, action: ActionT) -> float:
         r"""Estimate the Q-value for a state-action pair.
 
@@ -671,7 +683,7 @@ class FunctionApproxQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         Returns:
             float: The estimated Q-value.
         """
-        phi = self.feature_extractor(state)
+        phi = self._features(state)
         idx = self.actions.index(action)
         q_value = np.dot(phi, self.weight[:, idx])
         return float(q_value)
@@ -694,7 +706,7 @@ class FunctionApproxQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         Returns:
             np.ndarray: An array of estimated Q-values for each action.
         """
-        phi = self.feature_extractor(state)
+        phi = self._features(state)
         q_values = phi @ self.weight
         return q_values
 
@@ -766,7 +778,7 @@ class FunctionApproxQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         """
         T = transition
         a = self.actions.index(T.action)
-        phi = self.feature_extractor(T.state)
+        phi = self._features(T.state)
         old_values = self.get_vector_q(T.state)
 
         if transition.terminated:
