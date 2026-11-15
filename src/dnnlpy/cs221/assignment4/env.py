@@ -50,9 +50,6 @@ class NumberLineEnv(gym.Env):
         self.right_reward = right_reward
         self.penalty = penalty
 
-        if seed is not None:
-            super().reset(seed=seed)
-
         # -n, ..., 0, ..., n
         self.observation_space = spaces.Discrete(2 * n + 1, start=-n, seed=seed)
         self._num_states = int(self.observation_space.n)
@@ -63,6 +60,8 @@ class NumberLineEnv(gym.Env):
 
         self.state = 0
         self.terminal_states = {-n, n}
+
+        super().reset(seed=seed)
 
     @property
     def actions(self) -> list[int]:
@@ -179,8 +178,8 @@ class CustomMountainCarEnv(MountainCarEnv):
         gravity: float = 0.0025,
         *,
         render_mode: RenderMode | None = None,
-        screen_width: int = 800,
-        screen_height: int = 600,
+        screen_width: int = 960,
+        screen_height: int = 640,
         seed: int | None = None,
     ) -> None:
         """Initializes the ``CustomMountainCarEnv`` with the specified parameters."""
@@ -192,9 +191,6 @@ class CustomMountainCarEnv(MountainCarEnv):
         self.goal_velocity = goal_velocity
         self.force = force
         self.gravity = gravity
-
-        if seed is not None:
-            super().reset(seed=seed)
 
         self.low = np.array([self.min_position, -self.max_speed], dtype=np.float32)
         self.high = np.array([self.max_position, self.max_speed], dtype=np.float32)
@@ -208,6 +204,8 @@ class CustomMountainCarEnv(MountainCarEnv):
 
         self.screen_width = screen_width
         self.screen_height = screen_height
+
+        super().reset(seed=seed)
 
     @property
     def actions(self) -> list[int]:
