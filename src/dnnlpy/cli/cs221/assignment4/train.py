@@ -673,7 +673,7 @@ def main() -> None:
         '--eval-mode',
         choices=['sample', 'greedy'],
         default='sample',
-        help='Evaluation mode for Policy Gradient agents only: '
+        help='Evaluation mode for Policy Gradient / Actor-Critic agents only: '
         '`sample` samples actions from the policy distribution, '
         'while `greedy` selects the action with the highest probability.',
     )
