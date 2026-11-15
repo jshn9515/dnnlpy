@@ -93,7 +93,7 @@ def train_value_iteration(args: argparse.Namespace) -> None:
             json.dump(results, fp, indent=2, sort_keys=True)
         logger.info(f'Saved weights for trial {i} of value-iteration agent.')
 
-        path = args.path / f'vi_trial_{i}.svg'
+        path = args.path / f'vi_trial_{i}.png'
         plot_rewards(train_rewards, eval_rewards, path=path, show=args.show_plot)
 
 
@@ -147,7 +147,7 @@ def train_tabular_q_learning(args: argparse.Namespace) -> None:
         np.save(args.path / f'tabular_trial_{i}_weights.npy', rl.Q)
         logger.info(f'Saved weights for trial {i} of tabular Q-learning agent.')
 
-        path = args.path / f'tabular_trial_{i}.svg'
+        path = args.path / f'tabular_trial_{i}.png'
         plot_rewards(train_rewards, eval_rewards, path=path, show=args.show_plot)
 
 
@@ -211,7 +211,7 @@ def train_function_approx_q_learning(args: argparse.Namespace) -> None:
             f'Saved weights for trial {i} of function approximation Q-learning agent.'
         )
 
-        path = args.path / f'function_approx_trial_{i}.svg'
+        path = args.path / f'function_approx_trial_{i}.png'
         plot_rewards(train_rewards, eval_rewards, path=path, show=args.show_plot)
 
 
@@ -274,7 +274,7 @@ def train_constrained_q_learning(args: argparse.Namespace) -> None:
         np.save(args.path / f'constrained_trial_{i}_weights.npy', rl.weight)
         logger.info(f'Saved weights for trial {i} of constrained Q-learning agent.')
 
-        path = args.path / f'constrained_trial_{i}.svg'
+        path = args.path / f'constrained_trial_{i}.png'
         plot_rewards(train_rewards, eval_rewards, path=path, show=args.show_plot)
 
 
@@ -354,7 +354,7 @@ def train_policy_gradient(args: argparse.Namespace) -> None:
         np.save(args.path / f'policy_gradient_trial_{i}_weights.npy', rl.theta)
         logger.info(f'Saved weights for trial {i} of policy gradient agent.')
 
-        path = args.path / f'policy_gradient_trial_{i}.svg'
+        path = args.path / f'policy_gradient_trial_{i}.png'
         plot_rewards(
             train_rewards,
             eval_sample_rewards,
@@ -440,7 +440,7 @@ def train_actor_critic(args: argparse.Namespace) -> None:
         np.save(args.path / f'actor_critic_trial_{i}_weights.npy', rl.theta)
         logger.info(f'Saved weights for trial {i} of actor-critic agent.')
 
-        path = args.path / f'actor_critic_trial_{i}.svg'
+        path = args.path / f'actor_critic_trial_{i}.png'
         plot_rewards(
             train_rewards,
             eval_sample_rewards,
@@ -624,7 +624,7 @@ def train_all_agents(args: argparse.Namespace) -> None:
 
         plot_training_curves(
             curves,
-            path=args.path / f'training_curves_trial_{i}.svg',
+            path=args.path / f'training_curves_trial_{i}.png',
             show=args.show_plot,
         )
         logger.info(f'Saved training curve for trial {i}.')
