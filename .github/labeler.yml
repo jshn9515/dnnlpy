@@ -20,6 +20,13 @@ cs221:
           - "src/dnnlpy/cli/cs221/**"
           - "tests/test_cs221/**"
 
+cs234:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/dnnlpy/cs234/**"
+          - "src/dnnlpy/cli/cs234/**"
+          - "tests/test_cs234/**"
+
 documentation:
   - changed-files:
       - any-glob-to-any-file:
