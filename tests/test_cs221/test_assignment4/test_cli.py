@@ -13,6 +13,16 @@ import dnnlpy.cs221.assignment4 as a4
 from dnnlpy.cli.cs221.assignment4 import eval, train
 
 
+def disable_eval_rendering(monkeypatch: pytest.MonkeyPatch) -> None:
+    original_env = a4.CustomMountainCarEnv
+
+    def headless_env(*args: Any, **kwargs: Any) -> a4.CustomMountainCarEnv:
+        assert kwargs.pop('render_mode') == 'human'
+        return original_env(*args, **kwargs)
+
+    monkeypatch.setattr(a4, 'CustomMountainCarEnv', headless_env)
+
+
 @pytest.mark.parametrize(
     ('agent', 'agent_class'),
     [
@@ -231,6 +241,7 @@ def test_eval_cli_loads_trained_results(
     assert (tmp_path / filename).is_file()
 
     calls.clear()
+    disable_eval_rendering(monkeypatch)
     monkeypatch.setattr(
         sys,
         'argv',
@@ -249,7 +260,16 @@ def test_eval_cli_loads_trained_results(
     assert len(calls) == 1
     _, rl, num_episodes, kwargs = calls[0]
     assert num_episodes == 1
-    assert kwargs == {'train': False, 'verbose': False, 'demo': True}
+
+    expected_kwargs: dict[str, Any] = {
+        'train': False,
+        'verbose': False,
+        'demo': True,
+    }
+    if agent in {'policy-gradient', 'actor-critic'}:
+        expected_kwargs['eval_mode'] = 'sample'
+
+    assert kwargs == expected_kwargs
 
     if agent == 'value-iteration':
         policy = json.loads((tmp_path / filename).read_text())
@@ -273,6 +293,7 @@ def test_eval_cli_naive_agent(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
         return np.zeros(num_episodes)
 
     monkeypatch.setattr(a4, 'simulate', fake_simulate)
+    disable_eval_rendering(monkeypatch)
     monkeypatch.setattr(
         sys,
         'argv',
