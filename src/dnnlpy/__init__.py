@@ -13,3 +13,5 @@ from .utils import (
     bytes_to_mib as bytes_to_mib,
     count_params as count_params,
 )
+
+__version__ = '2026.11.01.dev0'
