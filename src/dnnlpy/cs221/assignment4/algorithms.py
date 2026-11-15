@@ -1276,6 +1276,21 @@ class PolicyGradient[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         actions = np.array(self.actions)
         return self.rng.choice(actions, p=probs)
 
+    get_random_action = get_action
+
+    def get_greedy_action(self, state: StateT, explore: bool = False) -> ActionT:
+        r"""Select the action with the highest probability under the current policy.
+
+        Args:
+            state (StateT): The current environment state.
+            explore (bool, optional): Unused. Defaults to ``False``.
+
+        Returns:
+            ActionT: The action with the highest probability under :math:`\pi_\theta(a \mid s)`.
+        """
+        probs = self.get_action_probs(state)
+        return self.actions[np.argmax(probs)]
+
     def log_prob_gradient(self, state: StateT, action: ActionT) -> Array2D:
         r"""Compute the gradient of :math:`\log\pi_\theta(a \mid s)`.
 
