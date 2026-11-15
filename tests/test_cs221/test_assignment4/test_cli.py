@@ -351,5 +351,5 @@ def test_train_cli_all_agents(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
         'actor-critic',
     ]
     assert all(np.array_equal(rewards, np.zeros(2)) for _, rewards in curves)
-    assert path == tmp_path / 'training_curves_trial_0.svg'
+    assert path == tmp_path / 'training_curves_trial_0.png'
     assert show is False
