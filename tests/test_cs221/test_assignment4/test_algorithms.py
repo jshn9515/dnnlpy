@@ -90,6 +90,58 @@ def test_function_approx_q_values_and_terminal_update():
     )
 
 
+@pytest.mark.parametrize(
+    'agent_type', [a4.FunctionApproxQLearning, a4.ConstrainedQLearning]
+)
+@pytest.mark.parametrize('operation', ['get_single_q', 'get_vector_q', 'step'])
+def test_q_learning_reports_feature_dimension_mismatch(agent_type, operation: str):
+    agent = agent_type(36, lambda state: np.ones(16), [0, 1], discount=0.9, seed=0)
+    state = np.array([0.0, 0.0])
+
+    with pytest.raises(
+        RuntimeError,
+        match=r'Feature extractor returned shape \(16,\), but feature_dim=36 '
+        r'requires shape \(36,\)',
+    ):
+        if operation == 'get_single_q':
+            agent.get_single_q(state, 0)
+        elif operation == 'get_vector_q':
+            agent.get_vector_q(state)
+        else:
+            agent.step(a4.MDPTransition(state, 0, -1.0, state, True, False))
+
+
+@pytest.mark.parametrize(
+    ('max_speed', 'next_velocity', 'expected_action', 'expected_target'),
+    [
+        (0.01, 0.0074, 1, 0.0),  # Action 2 has the highest Q but exceeds the limit.
+        (0.01, 0.009, None, -1.0),  # No action is feasible at the next state.
+        (None, 0.0074, 2, 49.0),  # Without a limit, all actions remain available.
+    ],
+)
+def test_constrained_q_learning_masks_next_action_values(
+    max_speed: float | None,
+    next_velocity: float,
+    expected_action: int | None,
+    expected_target: float,
+):
+    features = lambda state: np.array([1.0])
+    agent = a4.ConstrainedQLearning(
+        1, features, [0, 1, 2], discount=0.5, max_speed=max_speed, seed=0
+    )
+    agent.weight[:] = [[1.0, 2.0, 100.0]]
+    state = np.array([0.0, 0.0])
+    next_state = np.array([-np.pi / 3, next_velocity])
+
+    assert agent.get_action(next_state, explore=False) == expected_action
+    agent.step(a4.MDPTransition(state, 0, -1.0, next_state, False, False))
+
+    npt.assert_allclose(
+        agent.weight[0],
+        [1.0 + agent.step_size * (expected_target - 1.0), 2.0, 100.0],
+    )
+
+
 def test_linear_value_function_distinguishes_truncation_from_termination():
     features = lambda state: np.array([1.0, state], dtype=np.float32)
     value = algo.LinearValueFunction(2, features, step_size=0.1, discount=0.5)
@@ -109,3 +161,16 @@ def test_policy_gradient_flushes_truncated_rollout():
     agent.step(a4.MDPTransition(0, 0, 1.0, 1, False, True))
     assert agent.rollout == []
     assert agent.baseline == 1.0
+
+
+def test_actor_critic_uses_independent_critic_learning_rate():
+    features = lambda state: np.array([1.0])
+    agent = a4.ActorCritic(1, features, [0, 1], actor_step_size=1e-5)
+
+    assert agent.step_size == 1e-5
+    assert agent.value_function.step_size == 0.01
+
+    agent = a4.ActorCritic(
+        1, features, [0, 1], actor_step_size=1e-5, critic_step_size=0.02
+    )
+    assert agent.value_function.step_size == 0.02
