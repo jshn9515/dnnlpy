@@ -216,11 +216,15 @@ def simulate[StateT, ActionT](
             if transition.terminated or transition.truncated:
                 break  # The episode has ended
 
-        if verbose and episode % 100 == 0:
-            n = len(str(num_episodes))
+        advantage = getattr(rl, 'advantage', None)
+        advantage = f'{advantage: .4f}' if isinstance(advantage, float) else 'N/A'
+
+        if verbose and (episode % 100 == 0 or episode == num_episodes - 1):
+            n1 = len(str(num_episodes))
+            n2 = len(str(mdp.time_limit))
             logger.info(
-                f'Episode {episode:{n}} | reward: {total_reward:.4f}, '
-                f'length: {episode_length:d}'
+                f'Episode {episode:>{n1}d} | reward: {total_reward: .4f}, '
+                f'length: {episode_length:<{n2}d} | advantage: {advantage}'
             )
 
         total_rewards.append(total_reward)
