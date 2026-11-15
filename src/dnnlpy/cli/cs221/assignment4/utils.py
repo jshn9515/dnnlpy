@@ -19,13 +19,13 @@ def moving_average(x: np.ndarray, window: int) -> np.ndarray:
 def plot_rewards(
     train_rewards: np.ndarray,
     eval_rewards: np.ndarray,
-    greedy_eval_rewards: np.ndarray | None = None,
+    eval_greedy_rewards: np.ndarray | None = None,
     path: str | os.PathLike[str] | None = None,
     show: bool = True,
 ) -> None:
     """Plots the rewards of training and evaluation episodes, with moving averages.
 
-    If ``greedy_eval_rewards`` is not None, also plots those evaluation episodes (orange)
+    If ``eval_greedy_rewards`` is not None, also plots those evaluation episodes (orange)
     on top of the green ones.
     """
     window = 30
@@ -70,10 +70,10 @@ def plot_rewards(
         label='eval moving average (sampling)',
     )
 
-    if greedy_eval_rewards is not None:
+    if eval_greedy_rewards is not None:
         ax.scatter(
-            range(t_len, t_len + len(greedy_eval_rewards)),
-            greedy_eval_rewards,
+            range(t_len, t_len + len(eval_greedy_rewards)),
+            eval_greedy_rewards,
             s=8,
             c='tab:orange',
             alpha=0.5,
@@ -83,9 +83,9 @@ def plot_rewards(
         ax.plot(
             range(
                 t_len + window // 2,
-                t_len + len(greedy_eval_rewards) - window // 2,
+                t_len + len(eval_greedy_rewards) - window // 2,
             ),
-            moving_average(greedy_eval_rewards, window),
+            moving_average(eval_greedy_rewards, window),
             color='darkorange',
             linewidth=2,
             label='eval moving average (greedy)',
