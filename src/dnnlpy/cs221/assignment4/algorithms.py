@@ -1227,13 +1227,17 @@ class PolicyGradient[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         # out acting uniformly at random.
         self.theta = np.zeros((feature_dim, len(actions)))
 
-        # self.baseline: a running average of the utilities of past rollouts.
+        # A running average of the utilities of past rollouts.
         # None until the first rollout ends.
         self.baseline: float | None = None
 
         # The current rollout: a `(state, action, reward, next_state, terminal)`
         # tuple for each step.
         self.rollout: list[MDPTransition[StateT, ActionT]] = []
+
+        # The advantage estimate for the current rollout.
+        # None until the first rollout ends.
+        self.advantage: float | None = None
 
     def get_action_probs(self, state: StateT) -> Array1D:
         r"""Compute action probabilities using softmax policy.
@@ -1358,16 +1362,19 @@ class PolicyGradient[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         if self.baseline is None:
             self.baseline = U
 
-        # 3. Compute the policy gradient
+        # 3. Compute advantage using the old baseline
+        self.advantage = U - self.baseline
+
+        # 4. Compute the policy gradient
         gradient = np.zeros_like(self.theta)
         for T in self.rollout:
             log_grad = self.log_prob_gradient(T.state, T.action)
             gradient += (U - self.baseline) * log_grad
 
-        # 4. Update policy parameters
+        # 5. Update policy parameters
         self.theta += self.step_size * gradient
 
-        # 5. Update baseline
+        # 6. Update baseline
         self.baseline += self.baseline_step_size * (U - self.baseline)
 
     @override
@@ -1515,6 +1522,7 @@ class ActorCritic[StateT, ActionT](PolicyGradient[StateT, ActionT]):
         The critic remains fixed during this update and is trained separately using
         semi-gradient TD(0) after the actor update.
         """
+        advantages: list[float] = []
         gradient = np.zeros_like(self.theta)
 
         for T in self.rollout:
@@ -1528,8 +1536,10 @@ class ActorCritic[StateT, ActionT](PolicyGradient[StateT, ActionT]):
                 + self.discount * next_value
                 - self.value_function.get_v(T.state)
             )
+            advantages.append(advantage)
             gradient += advantage * self.log_prob_gradient(T.state, T.action)
 
+        self.advantage = float(np.mean(advantages))
         self.theta += self.step_size * gradient
 
     @override
