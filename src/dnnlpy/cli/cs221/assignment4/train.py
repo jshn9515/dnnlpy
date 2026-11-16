@@ -305,6 +305,13 @@ def train_policy_gradient(args: argparse.Namespace) -> None:
             seed=trial_seed,
         )
 
+        if not args.baseline:
+            rl.baseline = 0.0
+            rl.baseline_step_size = 0.0
+            logger.info(
+                f'Trial {i}: Policy Gradient agent will be trained without a baseline.'
+            )
+
         try:
             logger.info(f'Starting training for trial {i} of policy gradient agent.')
             t1 = time.perf_counter()
@@ -351,10 +358,19 @@ def train_policy_gradient(args: argparse.Namespace) -> None:
         finally:
             mdp.close()
 
-        np.save(args.path / f'policy_gradient_trial_{i}_weights.npy', rl.theta)
+        if args.baseline:
+            path = args.path / f'policy_gradient_trial_{i}_weights.npy'
+        else:
+            path = args.path / f'policy_gradient_trial_{i}_no_baseline_weights.npy'
+
+        np.save(path, rl.theta)
         logger.info(f'Saved weights for trial {i} of policy gradient agent.')
 
-        path = args.path / f'policy_gradient_trial_{i}.png'
+        if args.baseline:
+            path = args.path / f'policy_gradient_trial_{i}.png'
+        else:
+            path = args.path / f'policy_gradient_trial_{i}_no_baseline.png'
+
         plot_rewards(
             train_rewards,
             eval_sample_rewards,
@@ -390,6 +406,13 @@ def train_actor_critic(args: argparse.Namespace) -> None:
             discount=mdp.discount,
             seed=trial_seed,
         )
+
+        if not args.baseline:
+            rl.baseline = 0.0
+            rl.baseline_step_size = 0.0
+            logger.info(
+                f'Trial {i}: Actor-Critic agent will be trained without a baseline.'
+            )
 
         try:
             logger.info(f'Starting training for trial {i} of actor-critic agent.')
@@ -437,10 +460,19 @@ def train_actor_critic(args: argparse.Namespace) -> None:
         finally:
             mdp.close()
 
-        np.save(args.path / f'actor_critic_trial_{i}_weights.npy', rl.theta)
+        if args.baseline:
+            path = args.path / f'actor_critic_trial_{i}_weights.npy'
+        else:
+            path = args.path / f'actor_critic_trial_{i}_no_baseline_weights.npy'
+
+        np.save(path, rl.theta)
         logger.info(f'Saved weights for trial {i} of actor-critic agent.')
 
-        path = args.path / f'actor_critic_trial_{i}.png'
+        if args.baseline:
+            path = args.path / f'actor_critic_trial_{i}.png'
+        else:
+            path = args.path / f'actor_critic_trial_{i}_no_baseline.png'
+
         plot_rewards(
             train_rewards,
             eval_sample_rewards,
@@ -579,6 +611,13 @@ def train_all_agents(args: argparse.Namespace) -> None:
                         seed=trial_seed,
                     )
 
+                    if not args.baseline:
+                        rl.baseline = 0.0
+                        rl.baseline_step_size = 0.0
+                        logger.info(
+                            f'Trial {i}: Policy Gradient agent will be trained without a baseline.'
+                        )
+
                 case 'actor-critic':
                     mdp = a4.ContinuousMountainCarMDP(
                         a4.CustomMountainCarEnv(
@@ -603,6 +642,13 @@ def train_all_agents(args: argparse.Namespace) -> None:
                         discount=mdp.discount,
                         seed=trial_seed,
                     )
+
+                    if not args.baseline:
+                        rl.baseline = 0.0
+                        rl.baseline_step_size = 0.0
+                        logger.info(
+                            f'Trial {i}: Policy Gradient agent will be trained without a baseline.'
+                        )
 
                 case _:
                     logger.error(f'Unknown agent type: {name}.')
@@ -662,6 +708,12 @@ def main() -> None:
         "5. Policy Gradient (REINFORCE) (`'policy-gradient'`), "
         "6. Actor-Critic (`'actor-critic'`), "
         "7. Train all agents (`'all'`).",
+    )
+    parser.add_argument(
+        '--baseline',
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help='Whether to use a baseline for the policy gradient and actor-critic agents. ',
     )
     parser.add_argument(
         '--max-speed',
