@@ -130,12 +130,12 @@ def test_train_cli_all_agents_share_seed_per_trial(
 @pytest.mark.parametrize(
     ('agent', 'filename'),
     [
-        ('value-iteration', 'value_iteration_trial_0_weights.json'),
-        ('tabular', 'tabular_trial_0_weights.npy'),
-        ('function-approx', 'function_approx_trial_0_weights.npy'),
-        ('constrained', 'constrained_trial_0_weights.npy'),
-        ('policy-gradient', 'policy_gradient_trial_0_weights.npy'),
-        ('actor-critic', 'actor_critic_trial_0_weights.npy'),
+        ('value-iteration', 'value_iteration_0.json'),
+        ('tabular', 'tabular_0.npy'),
+        ('function-approx', 'function_approx_0_fourier_norm.npy'),
+        ('constrained', 'constrained_0_fourier_norm.npy'),
+        ('policy-gradient', 'policy_gradient_0_fourier_norm.npy'),
+        ('actor-critic', 'actor_critic_0_fourier_norm.npy'),
     ],
 )
 def test_train_cli_saves_results(
@@ -192,12 +192,12 @@ def test_train_cli_saves_results(
 @pytest.mark.parametrize(
     ('agent', 'filename', 'attribute'),
     [
-        ('value-iteration', 'value_iteration_trial_0_weights.json', 'pi_indices'),
-        ('tabular', 'tabular_trial_0_weights.npy', 'Q'),
-        ('function-approx', 'function_approx_trial_0_weights.npy', 'weight'),
-        ('constrained', 'constrained_trial_0_weights.npy', 'weight'),
-        ('policy-gradient', 'policy_gradient_trial_0_weights.npy', 'theta'),
-        ('actor-critic', 'actor_critic_trial_0_weights.npy', 'theta'),
+        ('value-iteration', 'value_iteration_0.json', 'pi_indices'),
+        ('tabular', 'tabular_0.npy', 'Q'),
+        ('function-approx', 'function_approx_0_fourier_norm.npy', 'weight'),
+        ('constrained', 'constrained_0_fourier_norm.npy', 'weight'),
+        ('policy-gradient', 'policy_gradient_0_fourier_norm.npy', 'theta'),
+        ('actor-critic', 'actor_critic_0_fourier_norm.npy', 'theta'),
     ],
 )
 def test_eval_cli_loads_trained_results(

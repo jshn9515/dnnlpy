@@ -1,4 +1,6 @@
 import os
+from argparse import Namespace
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,6 +13,33 @@ __all__ = [
     'plot_training_curves',
     'raw_fourier_extractor',
 ]
+
+
+def get_file_path(args: Namespace, trial: int, *, plot: bool = False) -> Path:
+    """Return the weights or plot path for an agent and trial."""
+    match args.agent:
+        case 'value-iteration':
+            stem = f'value_iteration_{trial}'
+        case 'tabular':
+            stem = f'tabular_{trial}'
+        case 'function-approx' | 'constrained' | 'policy-gradient' | 'actor-critic':
+            norm = 'norm' if args.extractor_mode == 'normalized' else 'raw'
+            stem = f'{args.agent.replace("-", "_")}_{trial}_fourier_{norm}'
+            if args.agent in {'policy-gradient', 'actor-critic'} and not args.baseline:
+                stem += '_nobase'
+        case 'all' if plot:
+            stem = f'training_curves_trial_{trial}'
+        case _:
+            raise ValueError(f'Unknown agent name: {args.agent}.')
+
+    if plot:
+        ext = 'png'
+    elif args.agent == 'value-iteration':
+        ext = 'json'
+    else:
+        ext = 'npy'
+
+    return args.path / f'{stem}.{ext}'
 
 
 def raw_fourier_extractor(state: np.ndarray, max_coeff: int = 5) -> np.ndarray:

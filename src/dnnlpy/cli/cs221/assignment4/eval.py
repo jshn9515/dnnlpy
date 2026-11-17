@@ -21,6 +21,7 @@ import dnnlpy
 import dnnlpy.cs221.assignment4 as a4
 
 from .utils import (
+    get_file_path,
     normalized_fourier_extractor,
     raw_fourier_extractor,
 )
@@ -79,10 +80,10 @@ def eval_value_iteration_agent(args: argparse.Namespace) -> None:
     )
 
     # Load the pre-trained policy from a JSON file.
-    path = args.path / f'value_iteration_trial_{args.trial}_weights.json'
+    path = get_file_path(args, trial=args.trial)
     if not path.exists():
         logger.error(
-            f'The file `value_iteration_trial_{args.trial}_weights.json` does not exist. '
+            f'The file `{path.name}` does not exist. '
             f'Please run the training script first.'
         )
         mdp.close()
@@ -126,10 +127,10 @@ def eval_tabular_q_learning_agent(args: argparse.Namespace) -> None:
     )
 
     # Load the pre-trained Q-table from a NumPy file.
-    path = args.path / f'tabular_trial_{args.trial}_weights.npy'
+    path = get_file_path(args, trial=args.trial)
     if not path.exists():
         logger.error(
-            f'The file `tabular_trial_{args.trial}_weights.npy` does not exist. '
+            f'The file `{path.name}` does not exist. '
             f'Please run the training script first.'
         )
         mdp.close()
@@ -174,10 +175,10 @@ def eval_function_approx_q_learning_agent(args: argparse.Namespace) -> None:
     )
 
     # Load the pre-trained weights from a NumPy file.
-    path = args.path / f'function_approx_trial_{args.trial}_weights.npy'
+    path = get_file_path(args, trial=args.trial)
     if not path.exists():
         logger.error(
-            f'The file `function_approx_trial_{args.trial}_weights.npy` does not exist. '
+            f'The file `{path.name}` does not exist. '
             f'Please run the training script first.'
         )
         mdp.close()
@@ -223,10 +224,10 @@ def eval_constrained_q_learning_agent(args: argparse.Namespace) -> None:
     )
 
     # Load the pre-trained weights from a NumPy file.
-    path = args.path / f'constrained_trial_{args.trial}_weights.npy'
+    path = get_file_path(args, trial=args.trial)
     if not path.exists():
         logger.error(
-            f'The file `constrained_trial_{args.trial}_weights.npy` does not exist. '
+            f'The file `{path.name}` does not exist. '
             f'Please run the training script first.'
         )
         mdp.close()
@@ -271,10 +272,10 @@ def eval_policy_gradient_agent(args: argparse.Namespace) -> None:
     )
 
     # Load the pre-trained weights from a NumPy file.
-    path = args.path / f'policy_gradient_trial_{args.trial}_weights.npy'
+    path = get_file_path(args, trial=args.trial)
     if not path.exists():
         logger.error(
-            f'The file `policy_gradient_trial_{args.trial}_weights.npy` does not exist. '
+            f'The file `{path.name}` does not exist. '
             f'Please run the training script first.'
         )
         mdp.close()
@@ -327,10 +328,10 @@ def eval_actor_critic_agent(args: argparse.Namespace) -> None:
     )
 
     # Load the pre-trained weights from a NumPy file.
-    path = args.path / f'actor_critic_trial_{args.trial}_weights.npy'
+    path = get_file_path(args, trial=args.trial)
     if not path.exists():
         logger.error(
-            f'The file `actor_critic_trial_{args.trial}_weights.npy` does not exist. '
+            f'The file `{path.name}` does not exist. '
             f'Please run the training script first.'
         )
         mdp.close()
@@ -401,6 +402,12 @@ def main() -> None:
         help='Evaluation mode for Policy Gradient / Actor-Critic agents only: '
         '`sample` samples actions from the policy distribution, '
         'while `greedy` selects the action with the highest probability.',
+    )
+    parser.add_argument(
+        '--baseline',
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help='Select weights trained with a baseline for policy gradient and actor-critic agents.',
     )
     parser.add_argument(
         '--trial',

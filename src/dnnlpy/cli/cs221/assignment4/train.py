@@ -22,6 +22,7 @@ import dnnlpy
 import dnnlpy.cs221.assignment4 as a4
 
 from .utils import (
+    get_file_path,
     normalized_fourier_extractor,
     plot_rewards,
     plot_training_curves,
@@ -89,11 +90,12 @@ def train_value_iteration(args: argparse.Namespace) -> None:
             if action != -1
         }
 
-        with open(args.path / f'value_iteration_trial_{i}_weights.json', 'w') as fp:
+        path = get_file_path(args, trial=i)
+        with open(path, 'w') as fp:
             json.dump(results, fp, indent=2, sort_keys=True)
         logger.info(f'Saved weights for trial {i} of value-iteration agent.')
 
-        path = args.path / f'value_iteration_trial_{i}.png'
+        path = get_file_path(args, trial=i, plot=True)
         plot_rewards(train_rewards, eval_rewards, path=path, show=args.show_plot)
 
 
@@ -144,10 +146,11 @@ def train_tabular_q_learning(args: argparse.Namespace) -> None:
         finally:
             mdp.close()
 
-        np.save(args.path / f'tabular_trial_{i}_weights.npy', rl.Q)
+        path = get_file_path(args, trial=i)
+        np.save(path, rl.Q)
         logger.info(f'Saved weights for trial {i} of tabular Q-learning agent.')
 
-        path = args.path / f'tabular_trial_{i}.png'
+        path = get_file_path(args, i, plot=True)
         plot_rewards(train_rewards, eval_rewards, path=path, show=args.show_plot)
 
 
@@ -181,18 +184,18 @@ def train_function_approx_q_learning(args: argparse.Namespace) -> None:
 
         try:
             logger.info(
-                f'Starting training for trial {i} of function approximation Q-learning agent.'
+                f'Starting training for trial {i} of function-approx Q-learning agent.'
             )
             t1 = time.perf_counter()
             train_rewards = a4.simulate(mdp, rl, args.num_train_episodes)
             t2 = time.perf_counter()
             logger.info(
-                f'Training complete for trial {i} of function approximation Q-learning agent. '
+                f'Training complete for trial {i} of function-approx Q-learning agent. '
                 f'Time: {t2 - t1:.4f} seconds.'
             )
 
             logger.info(
-                f'Running evaluation for trial {i} of function approximation Q-learning agent.'
+                f'Running evaluation for trial {i} of function-approx Q-learning agent.'
             )
             t1 = time.perf_counter()
             eval_rewards = a4.simulate(
@@ -200,18 +203,17 @@ def train_function_approx_q_learning(args: argparse.Namespace) -> None:
             )
             t2 = time.perf_counter()
             logger.info(
-                f'Evaluation complete for trial {i} of function approximation Q-learning agent. '
+                f'Evaluation complete for trial {i} of function-approx Q-learning agent. '
                 f'Time: {t2 - t1:.4f} seconds.'
             )
         finally:
             mdp.close()
 
-        np.save(args.path / f'function_approx_trial_{i}_weights.npy', rl.weight)
-        logger.info(
-            f'Saved weights for trial {i} of function approximation Q-learning agent.'
-        )
+        path = get_file_path(args, trial=i)
+        np.save(path, rl.weight)
+        logger.info(f'Saved weights for trial {i} of function-approx Q-learning agent.')
 
-        path = args.path / f'function_approx_trial_{i}.png'
+        path = get_file_path(args, trial=i, plot=True)
         plot_rewards(train_rewards, eval_rewards, path=path, show=args.show_plot)
 
 
@@ -271,10 +273,11 @@ def train_constrained_q_learning(args: argparse.Namespace) -> None:
         finally:
             mdp.close()
 
-        np.save(args.path / f'constrained_trial_{i}_weights.npy', rl.weight)
+        path = get_file_path(args, trial=i)
+        np.save(path, rl.weight)
         logger.info(f'Saved weights for trial {i} of constrained Q-learning agent.')
 
-        path = args.path / f'constrained_trial_{i}.png'
+        path = get_file_path(args, trial=i, plot=True)
         plot_rewards(train_rewards, eval_rewards, path=path, show=args.show_plot)
 
 
@@ -358,19 +361,11 @@ def train_policy_gradient(args: argparse.Namespace) -> None:
         finally:
             mdp.close()
 
-        if args.baseline:
-            path = args.path / f'policy_gradient_trial_{i}_weights.npy'
-        else:
-            path = args.path / f'policy_gradient_trial_{i}_no_baseline_weights.npy'
-
+        path = get_file_path(args, trial=i)
         np.save(path, rl.theta)
         logger.info(f'Saved weights for trial {i} of policy gradient agent.')
 
-        if args.baseline:
-            path = args.path / f'policy_gradient_trial_{i}.png'
-        else:
-            path = args.path / f'policy_gradient_trial_{i}_no_baseline.png'
-
+        path = get_file_path(args, trial=i, plot=True)
         plot_rewards(
             train_rewards,
             eval_sample_rewards,
@@ -460,19 +455,11 @@ def train_actor_critic(args: argparse.Namespace) -> None:
         finally:
             mdp.close()
 
-        if args.baseline:
-            path = args.path / f'actor_critic_trial_{i}_weights.npy'
-        else:
-            path = args.path / f'actor_critic_trial_{i}_no_baseline_weights.npy'
-
+        path = get_file_path(args, trial=i)
         np.save(path, rl.theta)
         logger.info(f'Saved weights for trial {i} of actor-critic agent.')
 
-        if args.baseline:
-            path = args.path / f'actor_critic_trial_{i}.png'
-        else:
-            path = args.path / f'actor_critic_trial_{i}_no_baseline.png'
-
+        path = get_file_path(args, trial=i, plot=True)
         plot_rewards(
             train_rewards,
             eval_sample_rewards,
@@ -670,7 +657,7 @@ def train_all_agents(args: argparse.Namespace) -> None:
 
         plot_training_curves(
             curves,
-            path=args.path / f'training_curves_trial_{i}.png',
+            path=get_file_path(args, trial=i, plot=True),
             show=args.show_plot,
         )
         logger.info(f'Saved training curve for trial {i}.')
