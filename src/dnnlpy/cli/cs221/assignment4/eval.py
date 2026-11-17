@@ -412,15 +412,20 @@ def main() -> None:
         help='The maximum steps per episode for the MountainCar environment.',
     )
     parser.add_argument(
-        '--extractor-mode',
+        '--feature-extractor',
         type=str,
-        choices=['raw', 'normalized'],
-        default='normalized',
-        help='Choose feature extractor mode for function-approx and constrained Q-learning. '
-        'Available options are: '
-        '1. `raw` for raw Fourier features, '
-        '2. `normalized` for normalized Fourier features.'
-        'Note: This argument must match the mode used during training.',
+        choices=['poly', 'fourier'],
+        default='fourier',
+        help='Choose polynomial or Fourier features for continuous-state agents. '
+        'This must match training.',
+    )
+    parser.add_argument(
+        '--normalized',
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help='Rescale continuous state coordinates using the environment bounds before '
+        'extracting features. Feature values may lie outside [0, 1]. '
+        'This must match training.',
     )
     parser.add_argument(
         '--seed',
@@ -448,9 +453,7 @@ def main() -> None:
         action='help',
         help='Show this help message and exit.',
     )
-    parser.set_defaults(feature_extractor='fourier')
     args = parser.parse_args()
-    args.normalized = args.extractor_mode == 'normalized'
 
     match args.agent:
         case 'naive':
