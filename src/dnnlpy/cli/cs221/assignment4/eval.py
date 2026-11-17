@@ -417,7 +417,7 @@ def main() -> None:
         choices=['poly', 'fourier'],
         default='fourier',
         help='Choose polynomial or Fourier features for continuous-state agents. '
-        'This must match training.',
+        'Note: This argument must match the mode used during training.',
     )
     parser.add_argument(
         '--normalized',
@@ -425,7 +425,7 @@ def main() -> None:
         default=True,
         help='Rescale continuous state coordinates using the environment bounds before '
         'extracting features. Feature values may lie outside [0, 1]. '
-        'This must match training.',
+        'Note: This argument must match the mode used during training.',
     )
     parser.add_argument(
         '--seed',
