@@ -18,9 +18,37 @@ def test_polynomial_feature_extractor_with_scaling():
 
 
 def test_fourier_feature_extractor_for_two_features():
-    actual = utils.fourier_feature_extractor(np.array([0.5, 0.25]), max_coeff=1)
+    actual = utils.fourier_feature_extractor(
+        np.array([0.5, 0.25]), max_coeff=1, scale=[1, 1]
+    )
     expected = [1.0, math.sqrt(0.5), 0.0, -math.sqrt(0.5)]
 
+    npt.assert_allclose(actual, expected, atol=1e-15)
+
+
+@pytest.mark.parametrize(
+    ('extractor', 'order'),
+    [
+        (utils.polynomial_feature_extractor, 'degree'),
+        (utils.fourier_feature_extractor, 'max_coeff'),
+    ],
+)
+def test_feature_extractors_normalize_with_bounds(extractor, order: str):
+    state = np.array([-0.5, 0.02])
+    low = np.array([-1.0, -0.06])
+    high = np.array([0.0, 0.10])
+
+    actual = extractor(state, **{order: 1}, low=low, high=high)
+    expected = extractor(np.array([0.5, 0.5]), **{order: 1}, scale=[1, 1])
+    npt.assert_allclose(actual, expected)
+
+    with pytest.raises(AssertionError, match='both be provided'):
+        extractor(state, **{order: 1}, low=low)
+
+
+def test_fourier_feature_extractor_raw_default_scale():
+    actual = utils.fourier_feature_extractor(np.array([0.5, 0.25]), max_coeff=1)
+    expected = [1.0, math.sqrt(0.5), 0.0, math.sqrt(0.5)]
     npt.assert_allclose(actual, expected, atol=1e-15)
 
 

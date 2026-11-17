@@ -27,13 +27,14 @@ def polynomial_feature_extractor(
     state: Array1D,
     degree: int = 3,
     scale: npt.ArrayLike | None = None,
+    low: Array1D | None = None,
+    high: Array1D | None = None,
 ) -> Array1D:
     r"""Extracts polynomial features from the given state up to the specified degree.
 
-    For a state with :math:`d` dimensions, this function computes all polynomial combinations
-    of the state dimensions up to the specified degree, including interaction terms. The
-    resulting feature vector will have a length of :math:`m`, which includes all combinations
-    of the state dimensions up to the specified degree.
+    Each state dimension is raised to powers from zero through ``degree``, including
+    interaction terms. For a two-dimensional state, the result has
+    ``(degree + 1) ** 2`` features.
 
     For example, we have a 3D state :math:`(x, y, z)` with degree 2, and scale :math:`[2, 1, 1]`,
     the output will include features like:
@@ -43,27 +44,36 @@ def polynomial_feature_extractor(
         [1, 2x, y, z, 4x^2, y^2, z^2, 2xy, 2xz, yz, 4x^2y, 4x^2z, \dots, 4x^2y^2z^2]
 
     Args:
-        state (np.ndarray): The input state, a NumPy array of shape ``(features,)``.
-        degree (int, optional): The maximum degree of the polynomial features. Defaults to 3.
+        state (np.ndarray): A state vector. The default scale assumes two dimensions.
+        degree (int, optional): The maximum power per state dimension. Defaults to 3.
         scale (npt.ArrayLike, optional): An optional scaling factor for each dimension of
             the state. If provided, each dimension of the state will be multiplied by the
             corresponding scale factor before computing the polynomial features. If not
-            provided, no scaling is applied. Defaults to ``None``.
+            provided, the default is ``[1, 15]`` for raw states and ``[1, 1]`` for
+            normalized states.
+        low (np.ndarray, optional): The lower bound of the state space for normalization.
+            Provide with ``high`` to normalize the state to ``[0, 1]`` before scaling.
+            Defaults to ``None``.
+        high (np.ndarray, optional): The upper bound of the state space for normalization.
+            Provide with ``low`` to normalize the state to ``[0, 1]`` before scaling.
+            Defaults to ``None``.
 
     Returns:
         np.ndarray: A 1D array containing the polynomial features of the input state, including
         all combinations of the state dimensions up to the specified degree.
-
-    Examples:
-        >>> state = np.array([1, 2])
-        >>> features = polynomial_feature_extractor(state, degree=2)
     """
-    if scale is None:
-        scale = np.ones_like(state)
-    else:
-        scale = np.asarray(scale)
+    if (low is None) ^ (high is None):
+        raise AssertionError('`low` and `high` must both be provided or both be None.')
 
+    if low is not None and high is not None:
+        state = (state - low) / (high - low)
+        default_scale = [1.0, 1.0]
+    else:
+        default_scale = [1.0, 15.0]
+
+    scale = np.asarray(default_scale if scale is None else scale)
     features = np.array([1.0])
+
     for s, sc in zip(state, scale, strict=True):
         features = np.outer(features, (s * sc) ** np.arange(degree + 1))
         features = features.flatten()
@@ -76,13 +86,14 @@ def fourier_feature_extractor(
     state: Array1D,
     max_coeff: int = 5,
     scale: npt.ArrayLike | None = None,
+    low: Array1D | None = None,
+    high: Array1D | None = None,
 ) -> Array1D:
     r"""Extracts Fourier features from the given state up to the specified maximum coefficient.
 
-    For a state with :math:`d` dimensions, this function computes the Fourier features of
-    the state dimensions up to the specified maximum coefficient. The resulting feature vector
-    will have a length of :math:`m`, which includes all combinations of the state dimensions
-    up to the specified maximum coefficient.
+    The extractor combines coefficients from zero through ``max_coeff`` for each
+    state dimension. For a two-dimensional state, the result has
+    ``(max_coeff + 1) ** 2`` features.
 
     .. math::
 
@@ -90,28 +101,37 @@ def fourier_feature_extractor(
         \cos(\pi c_1 s_1 + \pi c_2 s_2 + \ldots + \pi c_d s_d), \ldots]
 
     Args:
-        state (np.ndarray): The input state, a NumPy array of shape ``(features,)``.
+        state (np.ndarray): A state vector. The default scale assumes two dimensions.
         max_coeff (int, optional): The maximum coefficient for the Fourier features.
             Defaults to 5.
         scale (npt.ArrayLike, optional): An optional scaling factor for each dimension of
             the state. If provided, each dimension of the state will be multiplied by the
             corresponding scale factor before computing the Fourier features. If not
-            provided, no scaling is applied. Defaults to ``None``.
+            provided, the default is ``[1, 15]`` for raw states and ``[1, 1]`` for
+            normalized states.
+        low (np.ndarray, optional): The lower bound of the state space for normalization.
+            Provide with ``high`` to normalize the state to ``[0, 1]`` before scaling.
+            Defaults to ``None``.
+        high (np.ndarray, optional): The upper bound of the state space for normalization.
+            Provide with ``low`` to normalize the state to ``[0, 1]`` before scaling.
+            Defaults to ``None``.
 
     Returns:
         np.ndarray: A 1D array containing the Fourier features of the input state, including
         all combinations of the state dimensions up to the specified maximum coefficient.
-
-    Examples:
-        >>> state = np.array([0.5, 1.0])
-        >>> features = fourier_feature_extractor(state, max_coeff=2)
     """
-    if scale is None:
-        scale = np.ones_like(state)
-    else:
-        scale = np.asarray(scale)
+    if (low is None) ^ (high is None):
+        raise AssertionError('`low` and `high` must both be provided or both be None.')
 
+    if low is not None and high is not None:
+        state = (state - low) / (high - low)
+        default_scale = [1.0, 1.0]
+    else:
+        default_scale = [1.0, 15.0]
+
+    scale = np.asarray(default_scale if scale is None else scale)
     features = np.array([0.0])
+
     for s, sc in zip(state, scale, strict=True):
         new_features = np.arange(max_coeff + 1) * (s * sc)
         features = features[:, None] + new_features[None, :]
