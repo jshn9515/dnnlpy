@@ -779,15 +779,15 @@ class FunctionApproxQLearning[StateT, ActionT](RLAlgorithm[StateT, ActionT]):
         T = transition
         a = self.actions.index(T.action)
         phi = self._features(T.state)
-        old_values = self.get_vector_q(T.state)
+        old_V = self.get_single_q(T.state, T.action)
 
         if transition.terminated:
-            new_values = T.reward
+            new_V = T.reward
         else:
             q_values = self.get_vector_q(T.next_state)
-            new_values = T.reward + self.discount * np.max(q_values)
+            new_V = T.reward + self.discount * np.max(q_values)
 
-        self.weight[:, a] += self.step_size * (new_values - old_values[a]) * phi
+        self.weight[:, a] += self.step_size * (new_V - old_V) * phi
 
 
 class ConstrainedQLearning(FunctionApproxQLearning[np.ndarray, int]):
