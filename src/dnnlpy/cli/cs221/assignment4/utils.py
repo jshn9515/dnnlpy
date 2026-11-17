@@ -33,7 +33,7 @@ def get_file_path(args: Namespace, trial: int, *, plot: bool = False) -> Path:
             raise ValueError(f'Unknown agent name: {args.agent}.')
 
     if plot:
-        ext = 'png'
+        ext = args.format
     elif args.agent == 'value-iteration':
         ext = 'json'
     else:
@@ -147,7 +147,7 @@ def plot_rewards(
     ax.set_ylabel('Discounted Reward in Episode')
 
     if path:
-        fig.savefig(path, dpi=300)
+        fig.savefig(path, bbox_inches='tight', dpi=300)
     if show:
         plt.show()
 
@@ -155,7 +155,7 @@ def plot_rewards(
 def plot_training_curves(
     curves: list[tuple[str, np.ndarray]],
     scatter: bool = True,
-    path: str | None = None,
+    path: str | os.PathLike[str] | None = None,
     show: bool = True,
 ) -> None:
     """
@@ -189,6 +189,6 @@ def plot_training_curves(
     ax.set_ylabel('Discounted Reward in Episode')
 
     if path is not None:
-        fig.savefig(path, dpi=300)
+        fig.savefig(path, bbox_inches='tight', dpi=300)
     if show:
         plt.show()

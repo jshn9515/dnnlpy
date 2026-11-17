@@ -763,6 +763,13 @@ def main() -> None:
         help='Random seed for reproducibility.',
     )
     parser.add_argument(
+        '--format',
+        type=str,
+        choices=['png', 'svg', 'pdf'],
+        default='png',
+        help='The format of the output plot files.',
+    )
+    parser.add_argument(
         '--show-plot',
         action=argparse.BooleanOptionalAction,
         default=True,

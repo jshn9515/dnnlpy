@@ -314,7 +314,10 @@ def test_eval_cli_naive_agent(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     assert kwargs == {'train': False, 'verbose': False, 'demo': True}
 
 
-def test_train_cli_all_agents(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+@pytest.mark.parametrize('plot_format', ['png', 'svg', 'pdf'])
+def test_train_cli_all_agents(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, plot_format: str
+):
     agents: list[type[Any]] = []
     plotted: list[tuple[list[tuple[str, np.ndarray]], Path, bool]] = []
 
@@ -346,6 +349,8 @@ def test_train_cli_all_agents(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
             '1',
             '--num-train-episodes',
             '2',
+            '--format',
+            plot_format,
             '--no-show-plot',
             '--path',
             str(tmp_path),
@@ -372,5 +377,5 @@ def test_train_cli_all_agents(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
         'actor-critic',
     ]
     assert all(np.array_equal(rewards, np.zeros(2)) for _, rewards in curves)
-    assert path == tmp_path / 'training_curves_trial_0.png'
+    assert path == tmp_path / f'training_curves_trial_0.{plot_format}'
     assert show is False
