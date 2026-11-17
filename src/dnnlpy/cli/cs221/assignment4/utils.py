@@ -1,5 +1,7 @@
 import os
 from argparse import Namespace
+from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -8,10 +10,8 @@ import numpy as np
 import dnnlpy.cs221.assignment4 as a4
 
 __all__ = [
-    'normalized_fourier_extractor',
     'plot_rewards',
     'plot_training_curves',
-    'raw_fourier_extractor',
 ]
 
 
@@ -23,8 +23,11 @@ def get_file_path(args: Namespace, trial: int, *, plot: bool = False) -> Path:
         case 'tabular':
             stem = f'tabular_{trial}'
         case 'function-approx' | 'constrained' | 'policy-gradient' | 'actor-critic':
-            norm = 'norm' if args.extractor_mode == 'normalized' else 'raw'
-            stem = f'{args.agent.replace("-", "_")}_{trial}_fourier_{norm}'
+            norm = 'norm' if args.normalized else 'raw'
+            stem = (
+                f'{args.agent.replace("-", "_")}_{trial}_'
+                f'{args.feature_extractor}_{norm}'
+            )
             if args.agent in {'policy-gradient', 'actor-critic'} and not args.baseline:
                 stem += '_nobase'
         case 'all' if plot:
@@ -42,22 +45,23 @@ def get_file_path(args: Namespace, trial: int, *, plot: bool = False) -> Path:
     return args.path / f'{stem}.{ext}'
 
 
-def raw_fourier_extractor(state: np.ndarray, max_coeff: int = 5) -> np.ndarray:
-    """Extracts raw features from the state using Fourier basis functions."""
-    return a4.fourier_feature_extractor(state, max_coeff=max_coeff, scale=[1, 15])
-
-
-def normalized_fourier_extractor(
+def get_feature_extractor(
+    args: Namespace,
     mdp: a4.ContinuousMountainCarMDP,
-    state: np.ndarray,
-    max_coeff: int = 5,
-) -> np.ndarray:
-    """Extracts normalized features from the state using Fourier basis functions."""
-    return a4.fourier_feature_extractor(
-        (state - mdp.base_env.low) / (mdp.base_env.high - mdp.base_env.low),
-        max_coeff=max_coeff,
-        scale=[1, 1],
-    )
+    degree: int,
+) -> Callable[[np.ndarray], np.ndarray]:
+    """Build the selected feature extractor for a two-dimensional MountainCar state."""
+    if args.normalized:
+        bounds = {'low': mdp.base_env.low, 'high': mdp.base_env.high}
+    else:
+        bounds = {}
+
+    if args.feature_extractor == 'poly':
+        return partial(a4.polynomial_feature_extractor, degree=degree, **bounds)
+    if args.feature_extractor == 'fourier':
+        return partial(a4.fourier_feature_extractor, max_coeff=degree, **bounds)
+
+    raise ValueError(f'Unknown feature extractor: {args.feature_extractor}.')
 
 
 def moving_average(x: np.ndarray, window: int) -> np.ndarray:

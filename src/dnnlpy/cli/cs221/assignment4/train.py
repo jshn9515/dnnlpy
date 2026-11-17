@@ -13,7 +13,6 @@ import json
 import logging
 import os
 import time
-from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -22,11 +21,10 @@ import dnnlpy
 import dnnlpy.cs221.assignment4 as a4
 
 from .utils import (
+    get_feature_extractor,
     get_file_path,
-    normalized_fourier_extractor,
     plot_rewards,
     plot_training_curves,
-    raw_fourier_extractor,
 )
 
 __all__ = ['main']
@@ -168,10 +166,7 @@ def train_function_approx_q_learning(args: argparse.Namespace) -> None:
             time_limit=args.time_limit,
         )
 
-        if args.extractor_mode == 'raw':
-            feature_extractor = raw_fourier_extractor
-        else:
-            feature_extractor = partial(normalized_fourier_extractor, mdp)
+        feature_extractor = get_feature_extractor(args, mdp, degree=5)
 
         rl = a4.FunctionApproxQLearning(
             feature_dim=36,
@@ -231,10 +226,7 @@ def train_constrained_q_learning(args: argparse.Namespace) -> None:
             time_limit=args.time_limit,
         )
 
-        if args.extractor_mode == 'raw':
-            feature_extractor = raw_fourier_extractor
-        else:
-            feature_extractor = partial(normalized_fourier_extractor, mdp)
+        feature_extractor = get_feature_extractor(args, mdp, degree=5)
 
         rl = a4.ConstrainedQLearning(
             feature_dim=36,
@@ -295,10 +287,7 @@ def train_policy_gradient(args: argparse.Namespace) -> None:
             time_limit=args.time_limit,
         )
 
-        if args.extractor_mode == 'raw':
-            feature_extractor = partial(raw_fourier_extractor, max_coeff=3)
-        else:
-            feature_extractor = partial(normalized_fourier_extractor, mdp, max_coeff=3)
+        feature_extractor = get_feature_extractor(args, mdp, degree=3)
 
         rl = a4.PolicyGradient(
             feature_dim=16,
@@ -389,10 +378,7 @@ def train_actor_critic(args: argparse.Namespace) -> None:
             time_limit=args.time_limit,
         )
 
-        if args.extractor_mode == 'raw':
-            feature_extractor = partial(raw_fourier_extractor, max_coeff=3)
-        else:
-            feature_extractor = partial(normalized_fourier_extractor, mdp, max_coeff=3)
+        feature_extractor = get_feature_extractor(args, mdp, degree=3)
 
         rl = a4.ActorCritic(
             feature_dim=16,
@@ -534,10 +520,7 @@ def train_all_agents(args: argparse.Namespace) -> None:
                         time_limit=args.time_limit,
                     )
 
-                    if args.extractor_mode == 'raw':
-                        feature_extractor = raw_fourier_extractor
-                    else:
-                        feature_extractor = partial(normalized_fourier_extractor, mdp)
+                    feature_extractor = get_feature_extractor(args, mdp, degree=5)
 
                     rl = a4.FunctionApproxQLearning(
                         feature_dim=36,
@@ -558,10 +541,7 @@ def train_all_agents(args: argparse.Namespace) -> None:
                         time_limit=args.time_limit,
                     )
 
-                    if args.extractor_mode == 'raw':
-                        feature_extractor = raw_fourier_extractor
-                    else:
-                        feature_extractor = partial(normalized_fourier_extractor, mdp)
+                    feature_extractor = get_feature_extractor(args, mdp, degree=5)
 
                     rl = a4.ConstrainedQLearning(
                         feature_dim=36,
@@ -583,12 +563,7 @@ def train_all_agents(args: argparse.Namespace) -> None:
                         time_limit=args.time_limit,
                     )
 
-                    if args.extractor_mode == 'raw':
-                        feature_extractor = partial(raw_fourier_extractor, max_coeff=3)
-                    else:
-                        feature_extractor = partial(
-                            normalized_fourier_extractor, mdp, max_coeff=3
-                        )
+                    feature_extractor = get_feature_extractor(args, mdp, degree=3)
 
                     rl = a4.PolicyGradient(
                         feature_dim=16,
@@ -615,12 +590,7 @@ def train_all_agents(args: argparse.Namespace) -> None:
                         time_limit=args.time_limit,
                     )
 
-                    if args.extractor_mode == 'raw':
-                        feature_extractor = partial(raw_fourier_extractor, max_coeff=3)
-                    else:
-                        feature_extractor = partial(
-                            normalized_fourier_extractor, mdp, max_coeff=3
-                        )
+                    feature_extractor = get_feature_extractor(args, mdp, degree=3)
 
                     rl = a4.ActorCritic(
                         feature_dim=16,
@@ -795,7 +765,9 @@ def main() -> None:
         action='help',
         help='Show this help message and exit.',
     )
+    parser.set_defaults(feature_extractor='fourier')
     args = parser.parse_args()
+    args.normalized = args.extractor_mode == 'normalized'
 
     args.path.mkdir(parents=True, exist_ok=True)
     match args.agent:
