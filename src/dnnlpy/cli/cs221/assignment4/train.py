@@ -13,7 +13,6 @@ import json
 import logging
 import os
 import time
-from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -22,10 +21,10 @@ import dnnlpy
 import dnnlpy.cs221.assignment4 as a4
 
 from .utils import (
-    normalized_fourier_extractor,
+    get_feature_extractor,
+    get_file_path,
     plot_rewards,
     plot_training_curves,
-    raw_fourier_extractor,
 )
 
 __all__ = ['main']
@@ -89,11 +88,12 @@ def train_value_iteration(args: argparse.Namespace) -> None:
             if action != -1
         }
 
-        with open(args.path / f'value_iteration_trial_{i}_weights.json', 'w') as fp:
+        path = get_file_path(args, trial=i)
+        with open(path, 'w') as fp:
             json.dump(results, fp, indent=2, sort_keys=True)
         logger.info(f'Saved weights for trial {i} of value-iteration agent.')
 
-        path = args.path / f'value_iteration_trial_{i}.png'
+        path = get_file_path(args, trial=i, plot=True)
         plot_rewards(train_rewards, eval_rewards, path=path, show=args.show_plot)
 
 
@@ -144,10 +144,11 @@ def train_tabular_q_learning(args: argparse.Namespace) -> None:
         finally:
             mdp.close()
 
-        np.save(args.path / f'tabular_trial_{i}_weights.npy', rl.Q)
+        path = get_file_path(args, trial=i)
+        np.save(path, rl.Q)
         logger.info(f'Saved weights for trial {i} of tabular Q-learning agent.')
 
-        path = args.path / f'tabular_trial_{i}.png'
+        path = get_file_path(args, i, plot=True)
         plot_rewards(train_rewards, eval_rewards, path=path, show=args.show_plot)
 
 
@@ -165,10 +166,7 @@ def train_function_approx_q_learning(args: argparse.Namespace) -> None:
             time_limit=args.time_limit,
         )
 
-        if args.extractor_mode == 'raw':
-            feature_extractor = raw_fourier_extractor
-        else:
-            feature_extractor = partial(normalized_fourier_extractor, mdp)
+        feature_extractor = get_feature_extractor(args, mdp, degree=5)
 
         rl = a4.FunctionApproxQLearning(
             feature_dim=36,
@@ -181,18 +179,18 @@ def train_function_approx_q_learning(args: argparse.Namespace) -> None:
 
         try:
             logger.info(
-                f'Starting training for trial {i} of function approximation Q-learning agent.'
+                f'Starting training for trial {i} of function-approx Q-learning agent.'
             )
             t1 = time.perf_counter()
             train_rewards = a4.simulate(mdp, rl, args.num_train_episodes)
             t2 = time.perf_counter()
             logger.info(
-                f'Training complete for trial {i} of function approximation Q-learning agent. '
+                f'Training complete for trial {i} of function-approx Q-learning agent. '
                 f'Time: {t2 - t1:.4f} seconds.'
             )
 
             logger.info(
-                f'Running evaluation for trial {i} of function approximation Q-learning agent.'
+                f'Running evaluation for trial {i} of function-approx Q-learning agent.'
             )
             t1 = time.perf_counter()
             eval_rewards = a4.simulate(
@@ -200,18 +198,17 @@ def train_function_approx_q_learning(args: argparse.Namespace) -> None:
             )
             t2 = time.perf_counter()
             logger.info(
-                f'Evaluation complete for trial {i} of function approximation Q-learning agent. '
+                f'Evaluation complete for trial {i} of function-approx Q-learning agent. '
                 f'Time: {t2 - t1:.4f} seconds.'
             )
         finally:
             mdp.close()
 
-        np.save(args.path / f'function_approx_trial_{i}_weights.npy', rl.weight)
-        logger.info(
-            f'Saved weights for trial {i} of function approximation Q-learning agent.'
-        )
+        path = get_file_path(args, trial=i)
+        np.save(path, rl.weight)
+        logger.info(f'Saved weights for trial {i} of function-approx Q-learning agent.')
 
-        path = args.path / f'function_approx_trial_{i}.png'
+        path = get_file_path(args, trial=i, plot=True)
         plot_rewards(train_rewards, eval_rewards, path=path, show=args.show_plot)
 
 
@@ -229,10 +226,7 @@ def train_constrained_q_learning(args: argparse.Namespace) -> None:
             time_limit=args.time_limit,
         )
 
-        if args.extractor_mode == 'raw':
-            feature_extractor = raw_fourier_extractor
-        else:
-            feature_extractor = partial(normalized_fourier_extractor, mdp)
+        feature_extractor = get_feature_extractor(args, mdp, degree=5)
 
         rl = a4.ConstrainedQLearning(
             feature_dim=36,
@@ -271,10 +265,11 @@ def train_constrained_q_learning(args: argparse.Namespace) -> None:
         finally:
             mdp.close()
 
-        np.save(args.path / f'constrained_trial_{i}_weights.npy', rl.weight)
+        path = get_file_path(args, trial=i)
+        np.save(path, rl.weight)
         logger.info(f'Saved weights for trial {i} of constrained Q-learning agent.')
 
-        path = args.path / f'constrained_trial_{i}.png'
+        path = get_file_path(args, trial=i, plot=True)
         plot_rewards(train_rewards, eval_rewards, path=path, show=args.show_plot)
 
 
@@ -292,10 +287,7 @@ def train_policy_gradient(args: argparse.Namespace) -> None:
             time_limit=args.time_limit,
         )
 
-        if args.extractor_mode == 'raw':
-            feature_extractor = partial(raw_fourier_extractor, max_coeff=3)
-        else:
-            feature_extractor = partial(normalized_fourier_extractor, mdp, max_coeff=3)
+        feature_extractor = get_feature_extractor(args, mdp, degree=3)
 
         rl = a4.PolicyGradient(
             feature_dim=16,
@@ -358,19 +350,11 @@ def train_policy_gradient(args: argparse.Namespace) -> None:
         finally:
             mdp.close()
 
-        if args.baseline:
-            path = args.path / f'policy_gradient_trial_{i}_weights.npy'
-        else:
-            path = args.path / f'policy_gradient_trial_{i}_no_baseline_weights.npy'
-
+        path = get_file_path(args, trial=i)
         np.save(path, rl.theta)
         logger.info(f'Saved weights for trial {i} of policy gradient agent.')
 
-        if args.baseline:
-            path = args.path / f'policy_gradient_trial_{i}.png'
-        else:
-            path = args.path / f'policy_gradient_trial_{i}_no_baseline.png'
-
+        path = get_file_path(args, trial=i, plot=True)
         plot_rewards(
             train_rewards,
             eval_sample_rewards,
@@ -394,10 +378,7 @@ def train_actor_critic(args: argparse.Namespace) -> None:
             time_limit=args.time_limit,
         )
 
-        if args.extractor_mode == 'raw':
-            feature_extractor = partial(raw_fourier_extractor, max_coeff=3)
-        else:
-            feature_extractor = partial(normalized_fourier_extractor, mdp, max_coeff=3)
+        feature_extractor = get_feature_extractor(args, mdp, degree=3)
 
         rl = a4.ActorCritic(
             feature_dim=16,
@@ -460,19 +441,11 @@ def train_actor_critic(args: argparse.Namespace) -> None:
         finally:
             mdp.close()
 
-        if args.baseline:
-            path = args.path / f'actor_critic_trial_{i}_weights.npy'
-        else:
-            path = args.path / f'actor_critic_trial_{i}_no_baseline_weights.npy'
-
+        path = get_file_path(args, trial=i)
         np.save(path, rl.theta)
         logger.info(f'Saved weights for trial {i} of actor-critic agent.')
 
-        if args.baseline:
-            path = args.path / f'actor_critic_trial_{i}.png'
-        else:
-            path = args.path / f'actor_critic_trial_{i}_no_baseline.png'
-
+        path = get_file_path(args, trial=i, plot=True)
         plot_rewards(
             train_rewards,
             eval_sample_rewards,
@@ -547,10 +520,7 @@ def train_all_agents(args: argparse.Namespace) -> None:
                         time_limit=args.time_limit,
                     )
 
-                    if args.extractor_mode == 'raw':
-                        feature_extractor = raw_fourier_extractor
-                    else:
-                        feature_extractor = partial(normalized_fourier_extractor, mdp)
+                    feature_extractor = get_feature_extractor(args, mdp, degree=5)
 
                     rl = a4.FunctionApproxQLearning(
                         feature_dim=36,
@@ -571,10 +541,7 @@ def train_all_agents(args: argparse.Namespace) -> None:
                         time_limit=args.time_limit,
                     )
 
-                    if args.extractor_mode == 'raw':
-                        feature_extractor = raw_fourier_extractor
-                    else:
-                        feature_extractor = partial(normalized_fourier_extractor, mdp)
+                    feature_extractor = get_feature_extractor(args, mdp, degree=5)
 
                     rl = a4.ConstrainedQLearning(
                         feature_dim=36,
@@ -596,12 +563,7 @@ def train_all_agents(args: argparse.Namespace) -> None:
                         time_limit=args.time_limit,
                     )
 
-                    if args.extractor_mode == 'raw':
-                        feature_extractor = partial(raw_fourier_extractor, max_coeff=3)
-                    else:
-                        feature_extractor = partial(
-                            normalized_fourier_extractor, mdp, max_coeff=3
-                        )
+                    feature_extractor = get_feature_extractor(args, mdp, degree=3)
 
                     rl = a4.PolicyGradient(
                         feature_dim=16,
@@ -628,12 +590,7 @@ def train_all_agents(args: argparse.Namespace) -> None:
                         time_limit=args.time_limit,
                     )
 
-                    if args.extractor_mode == 'raw':
-                        feature_extractor = partial(raw_fourier_extractor, max_coeff=3)
-                    else:
-                        feature_extractor = partial(
-                            normalized_fourier_extractor, mdp, max_coeff=3
-                        )
+                    feature_extractor = get_feature_extractor(args, mdp, degree=3)
 
                     rl = a4.ActorCritic(
                         feature_dim=16,
@@ -670,7 +627,7 @@ def train_all_agents(args: argparse.Namespace) -> None:
 
         plot_training_curves(
             curves,
-            path=args.path / f'training_curves_trial_{i}.png',
+            path=get_file_path(args, trial=i, plot=True),
             show=args.show_plot,
         )
         logger.info(f'Saved training curve for trial {i}.')
@@ -760,20 +717,31 @@ def main() -> None:
         help='The maximum steps per episode for the MountainCar environment.',
     )
     parser.add_argument(
-        '--extractor-mode',
+        '--feature-extractor',
         type=str,
-        choices=['raw', 'normalized'],
-        default='normalized',
-        help='Choose feature extractor mode for function-approx and constrained Q-learning. '
-        'Available options are: '
-        '1. `raw` for raw Fourier features, '
-        '2. `normalized` for normalized Fourier features.',
+        choices=['poly', 'fourier'],
+        default='fourier',
+        help='Choose polynomial or Fourier features for continuous-state agents.',
+    )
+    parser.add_argument(
+        '--normalized',
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help='Rescale continuous state coordinates using the environment bounds before '
+        'extracting features. Feature values may lie outside [0, 1].',
     )
     parser.add_argument(
         '--seed',
         type=int,
         default=None,
         help='Random seed for reproducibility.',
+    )
+    parser.add_argument(
+        '--format',
+        type=str,
+        choices=['png', 'svg', 'pdf'],
+        default='png',
+        help='The format of the output plot files.',
     )
     parser.add_argument(
         '--show-plot',

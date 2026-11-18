@@ -12,7 +12,6 @@ import argparse
 import json
 import logging
 import os
-from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -20,10 +19,7 @@ import numpy as np
 import dnnlpy
 import dnnlpy.cs221.assignment4 as a4
 
-from .utils import (
-    normalized_fourier_extractor,
-    raw_fourier_extractor,
-)
+from .utils import get_feature_extractor, get_file_path
 
 __all__ = ['main']
 
@@ -79,10 +75,10 @@ def eval_value_iteration_agent(args: argparse.Namespace) -> None:
     )
 
     # Load the pre-trained policy from a JSON file.
-    path = args.path / f'value_iteration_trial_{args.trial}_weights.json'
+    path = get_file_path(args, trial=args.trial)
     if not path.exists():
         logger.error(
-            f'The file `value_iteration_trial_{args.trial}_weights.json` does not exist. '
+            f'The file `{path.name}` does not exist. '
             f'Please run the training script first.'
         )
         mdp.close()
@@ -126,10 +122,10 @@ def eval_tabular_q_learning_agent(args: argparse.Namespace) -> None:
     )
 
     # Load the pre-trained Q-table from a NumPy file.
-    path = args.path / f'tabular_trial_{args.trial}_weights.npy'
+    path = get_file_path(args, trial=args.trial)
     if not path.exists():
         logger.error(
-            f'The file `tabular_trial_{args.trial}_weights.npy` does not exist. '
+            f'The file `{path.name}` does not exist. '
             f'Please run the training script first.'
         )
         mdp.close()
@@ -159,10 +155,7 @@ def eval_function_approx_q_learning_agent(args: argparse.Namespace) -> None:
         time_limit=args.time_limit,
     )
 
-    if args.extractor_mode == 'raw':
-        feature_extractor = raw_fourier_extractor
-    else:
-        feature_extractor = partial(normalized_fourier_extractor, mdp)
+    feature_extractor = get_feature_extractor(args, mdp, degree=5)
 
     rl = a4.FunctionApproxQLearning(
         feature_dim=36,
@@ -174,10 +167,10 @@ def eval_function_approx_q_learning_agent(args: argparse.Namespace) -> None:
     )
 
     # Load the pre-trained weights from a NumPy file.
-    path = args.path / f'function_approx_trial_{args.trial}_weights.npy'
+    path = get_file_path(args, trial=args.trial)
     if not path.exists():
         logger.error(
-            f'The file `function_approx_trial_{args.trial}_weights.npy` does not exist. '
+            f'The file `{path.name}` does not exist. '
             f'Please run the training script first.'
         )
         mdp.close()
@@ -207,10 +200,7 @@ def eval_constrained_q_learning_agent(args: argparse.Namespace) -> None:
         time_limit=args.time_limit,
     )
 
-    if args.extractor_mode == 'raw':
-        feature_extractor = raw_fourier_extractor
-    else:
-        feature_extractor = partial(normalized_fourier_extractor, mdp)
+    feature_extractor = get_feature_extractor(args, mdp, degree=5)
 
     rl = a4.ConstrainedQLearning(
         feature_dim=36,
@@ -223,10 +213,10 @@ def eval_constrained_q_learning_agent(args: argparse.Namespace) -> None:
     )
 
     # Load the pre-trained weights from a NumPy file.
-    path = args.path / f'constrained_trial_{args.trial}_weights.npy'
+    path = get_file_path(args, trial=args.trial)
     if not path.exists():
         logger.error(
-            f'The file `constrained_trial_{args.trial}_weights.npy` does not exist. '
+            f'The file `{path.name}` does not exist. '
             f'Please run the training script first.'
         )
         mdp.close()
@@ -256,10 +246,7 @@ def eval_policy_gradient_agent(args: argparse.Namespace) -> None:
         time_limit=args.time_limit,
     )
 
-    if args.extractor_mode == 'raw':
-        feature_extractor = partial(raw_fourier_extractor, max_coeff=3)
-    else:
-        feature_extractor = partial(normalized_fourier_extractor, mdp, max_coeff=3)
+    feature_extractor = get_feature_extractor(args, mdp, degree=3)
 
     rl = a4.PolicyGradient(
         feature_dim=16,
@@ -271,10 +258,10 @@ def eval_policy_gradient_agent(args: argparse.Namespace) -> None:
     )
 
     # Load the pre-trained weights from a NumPy file.
-    path = args.path / f'policy_gradient_trial_{args.trial}_weights.npy'
+    path = get_file_path(args, trial=args.trial)
     if not path.exists():
         logger.error(
-            f'The file `policy_gradient_trial_{args.trial}_weights.npy` does not exist. '
+            f'The file `{path.name}` does not exist. '
             f'Please run the training script first.'
         )
         mdp.close()
@@ -312,10 +299,7 @@ def eval_actor_critic_agent(args: argparse.Namespace) -> None:
         time_limit=args.time_limit,
     )
 
-    if args.extractor_mode == 'raw':
-        feature_extractor = partial(raw_fourier_extractor, max_coeff=3)
-    else:
-        feature_extractor = partial(normalized_fourier_extractor, mdp, max_coeff=3)
+    feature_extractor = get_feature_extractor(args, mdp, degree=3)
 
     rl = a4.ActorCritic(
         feature_dim=16,
@@ -327,10 +311,10 @@ def eval_actor_critic_agent(args: argparse.Namespace) -> None:
     )
 
     # Load the pre-trained weights from a NumPy file.
-    path = args.path / f'actor_critic_trial_{args.trial}_weights.npy'
+    path = get_file_path(args, trial=args.trial)
     if not path.exists():
         logger.error(
-            f'The file `actor_critic_trial_{args.trial}_weights.npy` does not exist. '
+            f'The file `{path.name}` does not exist. '
             f'Please run the training script first.'
         )
         mdp.close()
@@ -403,6 +387,12 @@ def main() -> None:
         'while `greedy` selects the action with the highest probability.',
     )
     parser.add_argument(
+        '--baseline',
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help='Select weights trained with a baseline for policy gradient and actor-critic agents.',
+    )
+    parser.add_argument(
         '--trial',
         type=int,
         default=0,
@@ -422,14 +412,19 @@ def main() -> None:
         help='The maximum steps per episode for the MountainCar environment.',
     )
     parser.add_argument(
-        '--extractor-mode',
+        '--feature-extractor',
         type=str,
-        choices=['raw', 'normalized'],
-        default='normalized',
-        help='Choose feature extractor mode for function-approx and constrained Q-learning. '
-        'Available options are: '
-        '1. `raw` for raw Fourier features, '
-        '2. `normalized` for normalized Fourier features.'
+        choices=['poly', 'fourier'],
+        default='fourier',
+        help='Choose polynomial or Fourier features for continuous-state agents. '
+        'Note: This argument must match the mode used during training.',
+    )
+    parser.add_argument(
+        '--normalized',
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help='Rescale continuous state coordinates using the environment bounds before '
+        'extracting features. Feature values may lie outside [0, 1]. '
         'Note: This argument must match the mode used during training.',
     )
     parser.add_argument(

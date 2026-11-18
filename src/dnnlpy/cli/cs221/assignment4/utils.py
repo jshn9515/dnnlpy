@@ -1,4 +1,8 @@
 import os
+from argparse import Namespace
+from collections.abc import Callable
+from functools import partial
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -6,29 +10,58 @@ import numpy as np
 import dnnlpy.cs221.assignment4 as a4
 
 __all__ = [
-    'normalized_fourier_extractor',
     'plot_rewards',
     'plot_training_curves',
-    'raw_fourier_extractor',
 ]
 
 
-def raw_fourier_extractor(state: np.ndarray, max_coeff: int = 5) -> np.ndarray:
-    """Extracts raw features from the state using Fourier basis functions."""
-    return a4.fourier_feature_extractor(state, max_coeff=max_coeff, scale=[1, 15])
+def get_file_path(args: Namespace, trial: int, *, plot: bool = False) -> Path:
+    """Return the weights or plot path for an agent and trial."""
+    match args.agent:
+        case 'value-iteration':
+            stem = f'value_iteration_{trial}'
+        case 'tabular':
+            stem = f'tabular_{trial}'
+        case 'function-approx' | 'constrained' | 'policy-gradient' | 'actor-critic':
+            norm = 'norm' if args.normalized else 'raw'
+            stem = (
+                f'{args.agent.replace("-", "_")}_{trial}_'
+                f'{args.feature_extractor}_{norm}'
+            )
+            if args.agent in {'policy-gradient', 'actor-critic'} and not args.baseline:
+                stem += '_nobase'
+        case 'all' if plot:
+            stem = f'training_curves_trial_{trial}'
+        case _:
+            raise ValueError(f'Unknown agent name: {args.agent}.')
+
+    if plot:
+        ext = args.format
+    elif args.agent == 'value-iteration':
+        ext = 'json'
+    else:
+        ext = 'npy'
+
+    return args.path / f'{stem}.{ext}'
 
 
-def normalized_fourier_extractor(
+def get_feature_extractor(
+    args: Namespace,
     mdp: a4.ContinuousMountainCarMDP,
-    state: np.ndarray,
-    max_coeff: int = 5,
-) -> np.ndarray:
-    """Extracts normalized features from the state using Fourier basis functions."""
-    return a4.fourier_feature_extractor(
-        (state - mdp.base_env.low) / (mdp.base_env.high - mdp.base_env.low),
-        max_coeff=max_coeff,
-        scale=[1, 1],
-    )
+    degree: int,
+) -> Callable[[np.ndarray], np.ndarray]:
+    """Build the selected feature extractor for a two-dimensional MountainCar state."""
+    if args.normalized:
+        bounds = {'low': mdp.base_env.low, 'high': mdp.base_env.high}
+    else:
+        bounds = {}
+
+    if args.feature_extractor == 'poly':
+        return partial(a4.polynomial_feature_extractor, degree=degree, **bounds)
+    if args.feature_extractor == 'fourier':
+        return partial(a4.fourier_feature_extractor, max_coeff=degree, **bounds)
+
+    raise ValueError(f'Unknown feature extractor: {args.feature_extractor}.')
 
 
 def moving_average(x: np.ndarray, window: int) -> np.ndarray:
@@ -118,7 +151,7 @@ def plot_rewards(
     ax.set_ylabel('Discounted Reward in Episode')
 
     if path:
-        fig.savefig(path, dpi=300)
+        fig.savefig(path, bbox_inches='tight', dpi=300)
     if show:
         plt.show()
 
@@ -126,7 +159,7 @@ def plot_rewards(
 def plot_training_curves(
     curves: list[tuple[str, np.ndarray]],
     scatter: bool = True,
-    path: str | None = None,
+    path: str | os.PathLike[str] | None = None,
     show: bool = True,
 ) -> None:
     """
@@ -160,6 +193,6 @@ def plot_training_curves(
     ax.set_ylabel('Discounted Reward in Episode')
 
     if path is not None:
-        fig.savefig(path, dpi=300)
+        fig.savefig(path, bbox_inches='tight', dpi=300)
     if show:
         plt.show()

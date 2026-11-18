@@ -127,7 +127,7 @@ def test_problem_4a_2_hidden():
 @timeout
 def test_problem_4b_0():
     state = np.array([0.5, 0.3])
-    actual = a4.fourier_feature_extractor(state)
+    actual = a4.fourier_feature_extractor(state, scale=[1, 1])
     expected = np.load(FIXTURES_PATH / '4b-0-gold.npy', allow_pickle=True)
 
     npt.assert_allclose(actual, expected)

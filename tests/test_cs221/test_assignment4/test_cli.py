@@ -13,7 +13,7 @@ import dnnlpy.cs221.assignment4 as a4
 from dnnlpy.cli.cs221.assignment4 import eval, train
 
 
-def disable_eval_rendering(monkeypatch: pytest.MonkeyPatch) -> None:
+def _disable_eval_rendering(monkeypatch: pytest.MonkeyPatch) -> None:
     original_env = a4.CustomMountainCarEnv
 
     def headless_env(*args: Any, **kwargs: Any) -> a4.CustomMountainCarEnv:
@@ -128,22 +128,80 @@ def test_train_cli_all_agents_share_seed_per_trial(
 
 
 @pytest.mark.parametrize(
-    ('agent', 'filename'),
+    ('agent', 'filename', 'options'),
     [
-        ('value-iteration', 'value_iteration_trial_0_weights.json'),
-        ('tabular', 'tabular_trial_0_weights.npy'),
-        ('function-approx', 'function_approx_trial_0_weights.npy'),
-        ('constrained', 'constrained_trial_0_weights.npy'),
-        ('policy-gradient', 'policy_gradient_trial_0_weights.npy'),
-        ('actor-critic', 'actor_critic_trial_0_weights.npy'),
+        ('value-iteration', 'value_iteration_0.json', []),
+        ('tabular', 'tabular_0.npy', []),
+        ('function-approx', 'function_approx_0_fourier_norm.npy', []),
+        ('constrained', 'constrained_0_fourier_norm.npy', []),
+        ('policy-gradient', 'policy_gradient_0_fourier_norm.npy', []),
+        ('actor-critic', 'actor_critic_0_fourier_norm.npy', []),
+        ('function-approx', 'function_approx_0_fourier_raw.npy', ['--no-normalized']),
+        ('constrained', 'constrained_0_fourier_raw.npy', ['--no-normalized']),
+        ('policy-gradient', 'policy_gradient_0_fourier_raw.npy', ['--no-normalized']),
+        ('actor-critic', 'actor_critic_0_fourier_raw.npy', ['--no-normalized']),
+        (
+            'policy-gradient',
+            'policy_gradient_0_fourier_norm_nobase.npy',
+            ['--no-baseline'],
+        ),
+        ('actor-critic', 'actor_critic_0_fourier_norm_nobase.npy', ['--no-baseline']),
+        (
+            'actor-critic',
+            'actor_critic_0_fourier_raw_nobase.npy',
+            ['--no-normalized', '--no-baseline'],
+        ),
+        (
+            'function-approx',
+            'function_approx_0_poly_norm.npy',
+            ['--feature-extractor', 'poly'],
+        ),
+        (
+            'constrained',
+            'constrained_0_poly_raw.npy',
+            ['--feature-extractor', 'poly', '--no-normalized'],
+        ),
+        (
+            'policy-gradient',
+            'policy_gradient_0_poly_norm.npy',
+            ['--feature-extractor', 'poly'],
+        ),
+        (
+            'actor-critic',
+            'actor_critic_0_poly_raw_nobase.npy',
+            ['--feature-extractor', 'poly', '--no-normalized', '--no-baseline'],
+        ),
     ],
 )
 def test_train_cli_saves_results(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, agent: str, filename: str
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    agent: str,
+    filename: str,
+    options: list[str],
 ):
     def fake_simulate(mdp: Any, rl: Any, num_episodes: int, **kwargs: Any) -> Any:
         if agent == 'value-iteration':
             rl.pi_indices[0] = 1
+
+        elif agent != 'tabular':
+            state = np.array([-0.5, 0.02])
+            degree = 3 if agent in {'policy-gradient', 'actor-critic'} else 5
+            low = mdp.base_env.low if '--no-normalized' not in options else None
+            high = mdp.base_env.high if '--no-normalized' not in options else None
+
+            if '--feature-extractor' in options:
+                expected = a4.polynomial_feature_extractor(
+                    state, degree, low=low, high=high
+                )
+            else:
+                expected = a4.fourier_feature_extractor(
+                    state, degree, low=low, high=high
+                )
+
+            actual = rl.feature_extractor(state)
+            npt.assert_allclose(actual, expected)
+
         return np.zeros(num_episodes)
 
     monkeypatch.setattr(a4, 'simulate', fake_simulate)
@@ -160,6 +218,7 @@ def test_train_cli_saves_results(
             '1',
             '--path',
             str(tmp_path),
+            *options,
         ],
     )
 
@@ -190,14 +249,75 @@ def test_train_cli_saves_results(
 
 
 @pytest.mark.parametrize(
-    ('agent', 'filename', 'attribute'),
+    ('agent', 'filename', 'attribute', 'options'),
     [
-        ('value-iteration', 'value_iteration_trial_0_weights.json', 'pi_indices'),
-        ('tabular', 'tabular_trial_0_weights.npy', 'Q'),
-        ('function-approx', 'function_approx_trial_0_weights.npy', 'weight'),
-        ('constrained', 'constrained_trial_0_weights.npy', 'weight'),
-        ('policy-gradient', 'policy_gradient_trial_0_weights.npy', 'theta'),
-        ('actor-critic', 'actor_critic_trial_0_weights.npy', 'theta'),
+        ('value-iteration', 'value_iteration_0.json', 'pi_indices', []),
+        ('tabular', 'tabular_0.npy', 'Q', []),
+        ('function-approx', 'function_approx_0_fourier_norm.npy', 'weight', []),
+        ('constrained', 'constrained_0_fourier_norm.npy', 'weight', []),
+        ('policy-gradient', 'policy_gradient_0_fourier_norm.npy', 'theta', []),
+        ('actor-critic', 'actor_critic_0_fourier_norm.npy', 'theta', []),
+        (
+            'function-approx',
+            'function_approx_0_fourier_raw.npy',
+            'weight',
+            ['--no-normalized'],
+        ),
+        ('constrained', 'constrained_0_fourier_raw.npy', 'weight', ['--no-normalized']),
+        (
+            'policy-gradient',
+            'policy_gradient_0_fourier_raw.npy',
+            'theta',
+            ['--no-normalized'],
+        ),
+        (
+            'actor-critic',
+            'actor_critic_0_fourier_raw.npy',
+            'theta',
+            ['--no-normalized'],
+        ),
+        (
+            'policy-gradient',
+            'policy_gradient_0_fourier_norm_nobase.npy',
+            'theta',
+            ['--no-baseline'],
+        ),
+        (
+            'actor-critic',
+            'actor_critic_0_fourier_norm_nobase.npy',
+            'theta',
+            ['--no-baseline'],
+        ),
+        (
+            'actor-critic',
+            'actor_critic_0_fourier_raw_nobase.npy',
+            'theta',
+            ['--no-normalized', '--no-baseline'],
+        ),
+        (
+            'function-approx',
+            'function_approx_0_poly_norm.npy',
+            'weight',
+            ['--feature-extractor', 'poly'],
+        ),
+        (
+            'constrained',
+            'constrained_0_poly_raw.npy',
+            'weight',
+            ['--feature-extractor', 'poly', '--no-normalized'],
+        ),
+        (
+            'policy-gradient',
+            'policy_gradient_0_poly_norm.npy',
+            'theta',
+            ['--feature-extractor', 'poly'],
+        ),
+        (
+            'actor-critic',
+            'actor_critic_0_poly_raw_nobase.npy',
+            'theta',
+            ['--feature-extractor', 'poly', '--no-normalized', '--no-baseline'],
+        ),
     ],
 )
 def test_eval_cli_loads_trained_results(
@@ -206,6 +326,7 @@ def test_eval_cli_loads_trained_results(
     agent: str,
     filename: str,
     attribute: str,
+    options: list[str],
 ):
     calls: list[tuple[Any, Any, int, dict[str, Any]]] = []
 
@@ -235,13 +356,14 @@ def test_eval_cli_loads_trained_results(
             '1',
             '--path',
             str(tmp_path),
+            *options,
         ],
     )
     train.main()
     assert (tmp_path / filename).is_file()
 
     calls.clear()
-    disable_eval_rendering(monkeypatch)
+    _disable_eval_rendering(monkeypatch)
     monkeypatch.setattr(
         sys,
         'argv',
@@ -253,6 +375,7 @@ def test_eval_cli_loads_trained_results(
             '0',
             '--path',
             str(tmp_path),
+            *options,
         ],
     )
     eval.main()
@@ -293,7 +416,7 @@ def test_eval_cli_naive_agent(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
         return np.zeros(num_episodes)
 
     monkeypatch.setattr(a4, 'simulate', fake_simulate)
-    disable_eval_rendering(monkeypatch)
+    _disable_eval_rendering(monkeypatch)
     monkeypatch.setattr(
         sys,
         'argv',
@@ -314,7 +437,10 @@ def test_eval_cli_naive_agent(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     assert kwargs == {'train': False, 'verbose': False, 'demo': True}
 
 
-def test_train_cli_all_agents(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+@pytest.mark.parametrize('plot_format', ['png', 'svg', 'pdf'])
+def test_train_cli_all_agents(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, plot_format: str
+):
     agents: list[type[Any]] = []
     plotted: list[tuple[list[tuple[str, np.ndarray]], Path, bool]] = []
 
@@ -346,6 +472,8 @@ def test_train_cli_all_agents(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
             '1',
             '--num-train-episodes',
             '2',
+            '--format',
+            plot_format,
             '--no-show-plot',
             '--path',
             str(tmp_path),
@@ -372,5 +500,5 @@ def test_train_cli_all_agents(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
         'actor-critic',
     ]
     assert all(np.array_equal(rewards, np.zeros(2)) for _, rewards in curves)
-    assert path == tmp_path / 'training_curves_trial_0.png'
+    assert path == tmp_path / f'training_curves_trial_0.{plot_format}'
     assert show is False
